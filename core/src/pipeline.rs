@@ -432,20 +432,12 @@ fn try_decode_all(
     if width < 10 || height < 10 {
         return None;
     }
+    let decoder = crate::decoding::ZxingDecoder::new();
     for sym in symbologies {
-        if let Some(text) = zxing_decode_one(gray, width, height, sym) {
-            return Some((text, sym.to_zxing_format().to_string()));
+        if let Some(result) = decoder.decode(gray, width, height, &[*sym]) {
+            return Some((result.text, result.format));
         }
     }
-    None
-}
-
-fn zxing_decode_one(
-    _gray: &[u8],
-    _width: u32,
-    _height: u32,
-    _sym: &Symbology,
-) -> Option<String> {
     None
 }
 

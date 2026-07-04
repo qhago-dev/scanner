@@ -1,21 +1,46 @@
 .PHONY: all build-core build-sdk build-models build-wrappers clean test benchmark
 
+SHELL := /bin/bash
+
 all: build-core build-sdk
 
 # ============================================================
 # Core Rust → WASM
 # ============================================================
-build-core:
+build-zxing:
+	@echo "Building ZXing-C++ to WASM..."
+	source /home/louiso/emsdk/emsdk_env.sh && cd core/zxing && \
+		emcc -O3 -s WASM=1 \
+		-s EXPORTED_FUNCTIONS='["_zxing_read_barcode","_zxing_version","_malloc","_free"]' \
+		-s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8"]' \
+		-s ALLOW_MEMORY_GROWTH=1 -s TOTAL_MEMORY=16MB \
+		-s MODULARIZE=1 -s EXPORT_NAME='"ZXingBarcode"' \
+		-s EXPORT_ES6=1 \
+		-I zxing-cpp/core/src \
+		zxing_bridge.cpp build-wasm/core/libZXing.a \
+		-o zxing_barcode.js
+
+build-core: build-zxing
 	@echo "Building Rust core to WASM..."
 	cd core && wasm-pack build --target bundler --out-dir ../sdk/wasm --release --no-opt
+	@echo "Copying ZXing WASM files to SDK..."
+	cp core/zxing/zxing_barcode.js sdk/wasm/
+	cp core/zxing/zxing_barcode.wasm sdk/wasm/
+	cp core/zxing/zxing-wrapper.js sdk/wasm/
 
-build-core-web:
+build-core-web: build-zxing
 	@echo "Building Rust core to WASM (web target)..."
 	cd core && wasm-pack build --target web --out-dir pkg/web --release --no-opt
+	cp core/zxing/zxing_barcode.js core/pkg/web/
+	cp core/zxing/zxing_barcode.wasm core/pkg/web/
+	cp core/zxing/zxing-wrapper.js core/pkg/web/
 
-build-core-node:
+build-core-node: build-zxing
 	@echo "Building Rust core to WASM (node target)..."
 	cd core && wasm-pack build --target nodejs --out-dir pkg/node --release --no-opt
+	cp core/zxing/zxing_barcode.js core/pkg/node/
+	cp core/zxing/zxing_barcode.wasm core/pkg/node/
+	cp core/zxing/zxing-wrapper.js core/pkg/node/
 
 build-core-native:
 	@echo "Building Rust core native..."

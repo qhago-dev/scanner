@@ -80,3 +80,11 @@ ios/*.xcodeproj/xcuserdata/
 # Testing & Benchmarking
 # ============================================================
 benchmarks/dataset/data/
+
+# ============================================================
+# C++ ZXing WASM Build
+# ============================================================
+core/zxing/build-wasm/
+core/zxing/zxing-cpp/
+core/zxing/*.js
+core/zxing/*.wasm

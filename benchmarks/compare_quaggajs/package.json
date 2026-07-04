@@ -1,0 +1,15 @@
+{
+  "name": "scanai-benchmark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Benchmark comparing ScanAI SDK vs QuaggaJS",
+  "scripts": {
+    "benchmark": "node runner.js",
+    "generate-dataset": "node generate-dataset.js"
+  },
+  "dependencies": {
+    "@ericblade/quagga2": "^1.8.0",
+    "canvas": "^2.11.0",
+    "@scanai/sdk": "file:../../sdk"
+  }
+}

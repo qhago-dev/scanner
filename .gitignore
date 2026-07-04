@@ -1,0 +1,82 @@
+# ============================================================
+# OS & Editor Files
+# ============================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ============================================================
+# Node.js (SDK, Benchmarks, Wrappers)
+# ============================================================
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+dist/
+build/
+.env
+
+# ============================================================
+# Rust / WebAssembly (Core)
+# ============================================================
+target/
+Cargo.lock
+core/pkg/
+sdk/wasm/
+
+# ============================================================
+# Python (Training)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+.coverage
+
+# ============================================================
+# Machine Learning Checkpoints & Models
+# ============================================================
+checkpoints/
+onnx_models/
+*.onnx
+*.pt
+*.pth
+*.h5
+*.pb
+models/*.onnx
+training/checkpoints/
+
+# ============================================================
+# Mobile Wrappers (Flutter, React Native, Capacitor)
+# ============================================================
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+wrappers/flutter/build/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# iOS
+ios/Pods/
+ios/build/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+
+# ============================================================
+# Testing & Benchmarking
+# ============================================================
+benchmarks/dataset/data/

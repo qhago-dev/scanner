@@ -1,0 +1,40 @@
+[package]
+name = "scanai-core"
+version = "0.1.0"
+edition = "2021"
+description = "ScanAI SDK - AI-powered barcode scanning core (Rust/Wasm)"
+license = "MIT"
+repository = "https://github.com/scanai/scanai-sdk"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["wasm"]
+wasm = ["wasm-bindgen", "js-sys", "web-sys", "wasm-bindgen-futures"]
+native = ["ort"]
+
+[dependencies]
+ort = { version = "2.0.0-rc.12", optional = true, default-features = false }
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["console"] }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+ndarray = "0.16"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1.0"
+wee_alloc = "0.4"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0

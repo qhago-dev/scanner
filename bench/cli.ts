@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { loadManifest } from "./dataset/manifest";
 import { qhagoEngine } from "./engines/qhago";
+import { qhagoAiEngine } from "./engines/qhago-ai";
 import { quagga2Engine } from "./engines/quagga2";
 import type { Engine } from "./engines/types";
 import { zxingJsEngine } from "./engines/zxing-js";
@@ -31,6 +32,8 @@ const FACTORIES: Record<string, () => Engine> = {
   qhago: () => qhagoEngine("balanced"),
   "qhago-fast": () => qhagoEngine("fast"),
   "qhago-thorough": () => qhagoEngine("thorough"),
+  "qhago+ai": () => qhagoAiEngine(),
+  "qhago+ai-always": () => qhagoAiEngine(undefined, "always"),
   "zxing-wasm": zxingWasmEngine,
   "zxing-js": zxingJsEngine,
   quagga2: quagga2Engine,

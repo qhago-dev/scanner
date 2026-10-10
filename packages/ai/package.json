@@ -1,0 +1,68 @@
+{
+  "name": "@qhago/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Optional AI barcode detector plugin for @qhago/scanner (ONNX Runtime Web, WebGPU/WASM).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./worker": {
+      "types": "./dist/types/worker.d.ts",
+      "default": "./dist/worker.js"
+    },
+    "./models/*": "./models/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "models",
+    "MODEL_CARD.md",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qhago/scanner.git",
+    "directory": "packages/ai"
+  },
+  "keywords": [
+    "barcode",
+    "qr",
+    "detector",
+    "onnx",
+    "webgpu",
+    "qhago"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsup && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run --project node",
+    "test:browser": "vitest run --project browser"
+  },
+  "peerDependencies": {
+    "@qhago/scanner": ">=0.0.0-0 <1.0.0",
+    "onnxruntime-web": "^1.22.0"
+  },
+  "devDependencies": {
+    "@qhago/scanner": "workspace:*",
+    "@types/node": "^22.10.0",
+    "@vitest/browser": "^3.2.0",
+    "onnxruntime-web": "^1.30.0",
+    "playwright": "^1.55.0",
+    "pngjs": "^7.0.0",
+    "@types/pngjs": "^6.0.5",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -120,6 +120,7 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=3e-3)
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--width", type=float, default=1.5)
+    ap.add_argument("--head", choices=["full", "shared"], default="full")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
@@ -138,7 +139,7 @@ def main() -> None:
     vdl = DataLoader(val_set, 64, num_workers=4)
 
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = CenterNetLite(width=a.width).to(dev)
+    model = CenterNetLite(width=a.width, head=a.head).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=1e-4)
     steps = a.epochs * len(dl)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1, (s + 1) / 500) * 0.5 * (1 + math.cos(math.pi * min(1, s / steps))))

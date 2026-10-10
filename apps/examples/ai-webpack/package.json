@@ -1,0 +1,17 @@
+{
+  "name": "qhago-example-ai-webpack",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "@qhago/ai": "workspace:*",
+    "@qhago/scanner": "workspace:*",
+    "onnxruntime-web": "^1.30.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.0"
+  }
+}

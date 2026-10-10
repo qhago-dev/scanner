@@ -37,8 +37,11 @@ class DW(nn.Module):
 
 
 class CenterNetLite(nn.Module):
-    def __init__(self, num_classes: int = NUM_CLASSES, width: float = 1.5, neck: int = 80) -> None:
+    def __init__(self, num_classes: int = NUM_CLASSES, width: float = 1.5, neck: int = 80, head: str = "full") -> None:
+        """head="full": 3 cabezas conv 3×3 (v1, ~1,1 GMAC a 80×80). head="shared": un bloque DW compartido + 1×1
+        por salida (~10× menos cómputo en las cabezas; pensado para WASM en móviles)."""
         super().__init__()
+        self.head_kind = head
         c = [int(v * width) for v in (16, 32, 64, 96, 128)]
         self.stem = conv_bn(1, c[0], 3, 2)  # /2
         self.s4 = nn.Sequential(DW(c[0], c[1], 2), DW(c[1], c[1]))  # /4
@@ -53,14 +56,16 @@ class CenterNetLite(nn.Module):
         self.f16, self.f8, self.f4 = DW(n, n), DW(n, n), DW(n, n)
         self.up = nn.Upsample(scale_factor=2, mode="nearest")
 
-        def head(out: int, bias: float = 0.0) -> nn.Sequential:
-            h = nn.Sequential(conv_bn(n, n, 3), nn.Conv2d(n, out, 1))
-            nn.init.constant_(h[-1].bias, bias)
+        def make_head(out: int, bias: float = 0.0) -> nn.Module:
+            h = nn.Sequential(conv_bn(n, n, 3), nn.Conv2d(n, out, 1)) if head == "full" else nn.Conv2d(n, out, 1)
+            last = h[-1] if isinstance(h, nn.Sequential) else h
+            nn.init.constant_(last.bias, bias)
             return h
 
-        self.heat = head(num_classes, -2.19)  # prior ~0.1 (CenterNet)
-        self.offset = head(2)
-        self.corners = head(8)
+        self.shared = DW(n, n) if head == "shared" else nn.Identity()
+        self.heat = make_head(num_classes, -2.19)  # prior ~0.1 (CenterNet)
+        self.offset = make_head(2)
+        self.corners = make_head(8)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x4 = self.s4(self.stem(x))
@@ -70,7 +75,7 @@ class CenterNetLite(nn.Module):
         p = self.l32(x32)
         p = self.f16(self.up(p) + self.l16(x16))
         p = self.f8(self.up(p) + self.l8(x8))
-        p = self.f4(self.up(p) + self.l4(x4))
+        p = self.shared(self.f4(self.up(p) + self.l4(x4)))
         return torch.sigmoid(self.heat(p)), self.offset(p), self.corners(p)
 
 
@@ -95,6 +100,7 @@ def decode(heat: torch.Tensor, offset: torch.Tensor, corners: torch.Tensor, k: i
 
 
 if __name__ == "__main__":
-    m = CenterNetLite()
-    print(sum(p.numel() for p in m.parameters()) / 1e6, "M parámetros")
+    for kind in ("full", "shared"):
+        m = CenterNetLite(head=kind)
+        print(kind, sum(p.numel() for p in m.parameters()) / 1e6, "M parámetros")
     print([t.shape for t in m(torch.zeros(1, 1, INPUT, INPUT))])

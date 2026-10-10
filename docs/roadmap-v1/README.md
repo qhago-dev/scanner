@@ -97,7 +97,7 @@ La v1.0.0 está lista para publicar cuando **todos** estos puntos están en verd
 | 2 | [Motor de decodificación](./fase-2-motor/) | WASM propio + `decode(image)` universal | F0 (gate G2 requiere F1) | 6-8 d | pre-tag `alpha` | Hecha (G2 vs competidores pendiente de F1) |
 | 3 | [Scanner de cámara](./fase-3-camara/) | `createScanner()` en Worker + fusión multi-frame | F2 (gate G3 requiere F1) | 7-9 d | pre-tag `alpha` | Hecha (G3 y matriz de dispositivos pendientes) |
 | 4 | [API pública y DX](./fase-4-api-dx/) | API congelada, polyfill, compat Quagga, UI, parsers | F3 | 5-6 d | pre-tag `beta` | Hecha (fixtures nativos y publicación beta pendientes) |
-| 5 | [Detector IA opcional](./fase-5-ia/) | `@qhago/ai` (si pasa G5) | F5.1-F5.4: F1 · F5.5+: F4 | 14-20 d + GPU en cloud | `@qhago/ai@0.x` | Pendiente |
+| 5 | [Detector IA opcional](./fase-5-ia/) | `@qhago/ai` (si pasa G5) | F5.1-F5.4: F1 · F5.5+: F4 | 14-20 d + GPU en cloud | `@qhago/ai@0.x` | Implementada; G5 no superado (sin datos reales) → no se publica |
 | 6 | [Calidad y rendimiento](./fase-6-calidad/) | Tests, e2e, matriz de navegadores, presupuestos, fuzzing | F2-F4 (continuo) | 5-7 d | pre-tag `rc` | Hecha en local (matriz de dispositivos y `rc` pendientes) |
 | 7 | [Documentación y release](./fase-7-release/) | Docs, ejemplos, publicación 1.0 | F4, F6 | 4-5 d | `1.0.0` | Pendiente |
 | 8 | [Post-1.0](./fase-8-post-1.0/) | React/Vue, Capacitor, RN, nativo | F7 | — | `1.x` | Pendiente |

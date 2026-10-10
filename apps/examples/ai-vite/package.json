@@ -1,0 +1,17 @@
+{
+  "name": "qhago-example-ai-vite",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@qhago/ai": "workspace:*",
+    "@qhago/scanner": "workspace:*",
+    "onnxruntime-web": "^1.30.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

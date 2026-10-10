@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - id: hash
+        run: echo "key=engine-${{ hashFiles('packages/engine-wasm/**', '!packages/engine-wasm/vendor/**') }}-$(git -C packages/engine-wasm/vendor/zxing-cpp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: packages/engine-wasm/out
+          key: ${{ steps.hash.outputs.key }}
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "6.0.2"
+          actions-cache-folder: emsdk-cache
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: bash packages/engine-wasm/build.sh all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-wasm
+          path: packages/engine-wasm/out
+
+  check:
+    needs: wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-wasm
+          path: packages/engine-wasm/out
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run test
+
+  license:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bunx license-checker --production --excludePrivatePackages --failOn 'GPL;AGPL;LGPL;SSPL;BUSL'

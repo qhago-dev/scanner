@@ -1,90 +1,51 @@
-# ============================================================
-# OS & Editor Files
-# ============================================================
+# OS / editores
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 *.swp
-*.swo
 
-# ============================================================
-# Node.js (SDK, Benchmarks, Wrappers)
-# ============================================================
+# Node
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
 dist/
-build/
+*.tgz
+.turbo/
+coverage/
+playwright-report/
+test-results/
 .env
+.env.*
 
-# ============================================================
-# Rust / WebAssembly (Core)
-# ============================================================
-target/
-Cargo.lock
-core/pkg/
-sdk/wasm/
+# Builds del motor WASM
+packages/engine-wasm/build/
+packages/engine-wasm/out/
+packages/scanner/wasm/
 
-# ============================================================
-# Python (Training)
-# ============================================================
+# Python / entrenamiento
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
 .venv/
-.pytest_cache/
-.coverage
-
-# ============================================================
-# Machine Learning Checkpoints & Models
-# ============================================================
-checkpoints/
-onnx_models/
-*.onnx
+venv/
+training/checkpoints/
+training/runs/
+training/data/synth/out/
+training/data/real/
 *.pt
 *.pth
-*.h5
-*.pb
-models/*.onnx
-training/checkpoints/
 
-# ============================================================
-# Mobile Wrappers (Flutter, React Native, Capacitor)
-# ============================================================
-# Flutter
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-wrappers/flutter/build/
+# Modelos: solo se versionan los publicados en packages/ai/models/
+*.onnx
+!packages/ai/models/*.onnx
 
-# Android
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
+# Dataset de benchmark (bucket privado, ADR-12)
+bench/dataset/real/images/
+bench/dataset/real/videos/
+bench/dataset/synthetic/out/
+bench/results/raw/
+e2e/fixtures/videos/
 
-# iOS
-ios/Pods/
-ios/build/
-ios/*.xcworkspace/xcuserdata/
-ios/*.xcodeproj/xcuserdata/
+# Capturas de la demo
+apps/demo/captures/
 
-# ============================================================
-# Testing & Benchmarking
-# ============================================================
-benchmarks/dataset/data/
-
-# ============================================================
-# C++ ZXing WASM Build
-# ============================================================
-core/zxing/build-wasm/
-core/zxing/zxing-cpp/
-core/zxing/*.js
-core/zxing/*.wasm
+# Legado no versionado
+core/

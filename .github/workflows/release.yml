@@ -1,0 +1,54 @@
+# Publicación con trusted publishing (OIDC): sin tokens. Requiere que cada paquete
+# exista en npm y tenga configurado este workflow como trusted publisher (bootstrap.yml).
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Solo simular (no publica)"
+        type: boolean
+        default: true
+
+concurrency: release
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@^11.5.1
+      - uses: oven-sh/setup-bun@v2
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "6.0.2"
+      - run: bun install --frozen-lockfile
+      - run: bash packages/engine-wasm/build.sh all
+      - run: bun run build
+      - run: bun run test
+      - if: github.event_name == 'workflow_dispatch' && inputs.dry-run
+        run: |
+          bunx changeset status --verbose
+          for p in packages/scanner packages/ai; do [ -f "$p/package.json" ] && (cd "$p" && npm publish --dry-run --provenance --access public) || true; done
+      - if: github.event_name == 'push'
+        uses: changesets/action@v1
+        with:
+          # En modo pre, changeset publish usa el pre-tag (alpha/beta/rc) como dist-tag.
+          publish: bunx changeset publish
+          version: bunx changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"

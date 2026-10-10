@@ -1,0 +1,27 @@
+{
+  "name": "qhago-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "bench"
+  ],
+  "scripts": {
+    "build:wasm": "bash packages/engine-wasm/build.sh",
+    "build": "bun run --filter '@qhago/*' build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "bun run --filter '*' test",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@changesets/cli": "^2.29.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

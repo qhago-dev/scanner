@@ -1,0 +1,3 @@
+# Funciones C exportadas al JS (sin el prefijo _)
+zxing_read_barcode
+zxing_version

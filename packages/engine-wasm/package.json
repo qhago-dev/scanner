@@ -1,0 +1,12 @@
+{
+  "name": "@qhago/engine-wasm",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Build de ZXing-C++ (solo lectores) + bridge de Qhago a WebAssembly",
+  "license": "MIT",
+  "scripts": {
+    "build": "bash build.sh all",
+    "typecheck": "echo 'engine-wasm: sin TS'",
+    "test": "echo 'engine-wasm: tests nativos en F2.2'"
+  }
+}

@@ -1,0 +1,39 @@
+# USO ÚNICO (F0.8). Publica placeholders 0.0.0 para reservar los nombres y los depreca.
+# Necesita el secreto NPM_BOOTSTRAP_TOKEN (token granular, escritura sobre el scope @qhago,
+# caducidad corta). Después: configurar trusted publishing y BORRAR el secreto y el token.
+name: Bootstrap npm (uso único)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escribe "publicar" para confirmar'
+        required: true
+
+jobs:
+  bootstrap:
+    if: inputs.confirm == 'publicar'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@^11.5.1
+      - name: Publicar y deprecar placeholders
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
+        run: |
+          for name in @qhago/scanner @qhago/ai; do
+            dir=$(mktemp -d)
+            cat > "$dir/package.json" <<JSON
+          {"name":"$name","version":"0.0.0","description":"Reservado: en desarrollo. Usa @alpha.","license":"MIT",
+           "repository":{"type":"git","url":"git+https://github.com/${{ github.repository }}.git"}}
+          JSON
+            printf '# %s\n\nPaquete en desarrollo. Instala la pre-release: `npm i %s@alpha`.\n' "$name" "$name" > "$dir/README.md"
+            (cd "$dir" && npm publish --access public --provenance)
+            npm deprecate "$name@0.0.0" "Paquete en desarrollo: usa $name@alpha"
+          done

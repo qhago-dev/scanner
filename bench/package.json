@@ -1,0 +1,9 @@
+{
+  "name": "@qhago/bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "echo bench: sin código TS aún",
+    "test": "echo 'bench: sin tests unitarios aún'"
+  }
+}

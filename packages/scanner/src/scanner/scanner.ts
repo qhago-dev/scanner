@@ -100,6 +100,8 @@ export class Scanner {
   private userPaused = false;
   private _route: ScannerRoute | null = null;
   private lastDims = "";
+  /** Sube en cada teardown: los ticks asíncronos de una sesión anterior se descartan. */
+  private generation = 0;
   private cleanup: (() => void)[] = [];
   private readonly opts: ScannerOptions;
 
@@ -334,6 +336,7 @@ export class Scanner {
     };
     const tick = async () => {
       if (!this.running && this._state !== "starting") return;
+      const gen = this.generation;
       schedule();
       const now = performance.now();
       if (
@@ -366,13 +369,18 @@ export class Scanner {
             : {},
         );
       } catch {
-        this.scheduler.done(0);
+        if (gen === this.generation) this.scheduler.done(0);
+        return;
+      }
+      if (gen !== this.generation) {
+        bmp.close();
         return;
       }
       const meta: FrameMeta = { ts: now, srcWidth: w, srcHeight: h };
       if (this.inline) {
         try {
           const r = await this.inline.process(bmp, meta);
+          if (gen !== this.generation) return;
           this.scheduler.done(r.ms);
           if (this.opts.frameStats)
             this.emit({ type: "frame", fps: this.scheduler.fps, ms: r.ms, passes: r.passes });
@@ -435,6 +443,8 @@ export class Scanner {
 
   private teardown(): void {
     this.running = false;
+    this.generation++;
+    this.scheduler.reset();
     for (const c of this.cleanup.splice(0)) c();
     if (this.worker) {
       this.post({ t: "close", sid: this.sid });

@@ -23,7 +23,19 @@ async function fakeStream(constraints?: MediaStreamConstraints): Promise<MediaSt
   canvas.height = list[0]?.height ?? 480;
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   let i = 0;
-  const draw = () => ctx.drawImage(list[i++ % list.length] as ImageBitmap, 0, 0);
+  const draw = () => {
+    ctx.fillStyle = "#e0e0e0";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(list[i++ % list.length] as ImageBitmap, 0, 0);
+  };
+  // Cambio de dimensiones en caliente (rotación del dispositivo, cambio de resolución).
+  (globalThis as { __qhagoFakeCamera?: { resize(w: number, h: number): void } }).__qhagoFakeCamera =
+    {
+      resize(w, h) {
+        canvas.width = w;
+        canvas.height = h;
+      },
+    };
   draw();
   const timer = setInterval(draw, 1000 / 15);
   const stream = canvas.captureStream(15);

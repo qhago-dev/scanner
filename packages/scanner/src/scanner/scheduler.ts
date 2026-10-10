@@ -32,6 +32,12 @@ export class Scheduler {
     this.minInterval = Math.min(1000 / this.minFps, Math.max(1000 / this.maxFps, this.ema * 1.2));
   }
 
+  /** Nueva sesión (stop/start, cambio de cámara): un frame en vuelo del worker anterior ya no volverá. */
+  reset(): void {
+    this.inFlight = false;
+    this.last = Number.NEGATIVE_INFINITY;
+  }
+
   get fps(): number {
     return 1000 / this.minInterval;
   }

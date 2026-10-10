@@ -1,260 +1,276 @@
+#!/usr/bin/env python3
+"""Dataset sintético de benchmark (F1.4) con símbolos REALES de los 13 formatos.
+
+Renderiza con el writer de zxing-cpp (Apache-2.0), aplica el escenario y escribe un manifest
+compatible con bench/dataset/manifest.schema.json (`source: "synthetic"`). La etiqueta de cada
+muestra se verifica leyendo el render limpio con ZXing: si no se lee, la muestra se descarta.
+
+Uso:
+  PYTHONPATH=bench/.pydeps python3 bench/dataset/synthetic/generate.py --out bench/dataset/synthetic/out \
+      --per-scenario 100 --seed 7
+Requisitos: zxing-cpp (pip --target bench/.pydeps), numpy, opencv-python, pillow.
 """
-Generate benchmark dataset: 5,000 barcode images across 10 adversial scenarios.
-Each image has a corresponding ground truth JSON file with expected barcode text.
-Used to compare ScanAI SDK vs QuaggaJS performance.
-"""
+
+from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import os
 import random
+import string
+from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
+import cv2
+import numpy as np
+import zxingcpp
 
-
-SCENARIOS = [
-    ("01_normal", "Normal Light"),
-    ("02_low_light", "Low Light (<50 lux)"),
-    ("03_motion_blur", "Motion Blur"),
-    ("04_wrinkled", "Wrinkled Codes"),
-    ("05_perspective", "Extreme Perspective (>45deg)"),
-    ("06_occluded", "Partially Occluded"),
-    ("07_small", "Small Codes (<50px)"),
-    ("08_multiple", "Multiple Codes"),
-    ("09_glare", "Screen Reflection/Glare"),
-    ("10_combined", "Combined Adverse"),
-]
-
-BARCODE_TEXTS = [
-    "5901234123457",
-    "9780201379624",
-    "4006381333931",
-    "A1B2C3D4E5",
-    "HELLO-WORLD",
-    "SCAN-TEST-001",
-    "1234567890",
-    "QR-TEST-DATA-2026",
-    "https://example.com/scan",
-    "PRODUCT-CODE-99",
-]
-
-QR_TEXTS = [
-    "https://scanai.dev/test",
-    "BEGIN:VCARD\nVERSION:3.0\nFN:Test User\nEND:VCARD",
-    "WIFI:S:TestNetwork;T:WPA;P:password123;;",
-    "SMSTO:+1234567890:Hello from ScanAI",
-    "MATMSG:TO:test@scanai.dev;SUB:Benchmark;BODY:Testing;;",
-]
+F = zxingcpp.BarcodeFormat
+FORMATS = {
+    "aztec": F.Aztec, "codabar": F.Codabar, "code_39": F.Code39, "code_93": F.Code93, "code_128": F.Code128,
+    "data_matrix": F.DataMatrix, "ean_8": F.EAN8, "ean_13": F.EAN13, "itf": F.ITF, "pdf417": F.PDF417,
+    "qr_code": F.QRCode, "upc_a": F.UPCA, "upc_e": F.UPCE,
+}
+LINEAR = {"codabar", "code_39", "code_93", "code_128", "ean_8", "ean_13", "itf", "upc_a", "upc_e"}
+SCENARIOS = ["normal", "low_light", "motion_blur", "defocus", "perspective", "curved", "small", "multi",
+             "glare", "screen", "damaged", "inverted", "dense_2d"]
 
 
-def generate_barcode_1d(draw, x, y, w, h, text):
-    """Draw a simple 1D barcode representation."""
-    module_width = max(2, w // (len(text) * 4))
-    total_width = module_width * len(text) * 4
-    start_x = x + (w - total_width) // 2
-
-    for i, ch in enumerate(text):
-        code = ord(ch) % 103
-        for bit_pos in range(4):
-            bit = (code >> bit_pos) & 1
-            if bit:
-                bx = start_x + i * module_width * 4 + bit_pos * module_width
-                draw.rectangle([bx, y, bx + module_width - 1, y + h], fill=0)
-    return text
+def gtin_check(digits: str) -> str:
+    s = sum(int(d) * (3 if i % 2 == 0 else 1) for i, d in enumerate(reversed(digits)))
+    return str((10 - s % 10) % 10)
 
 
-def generate_qr_style(draw, x, y, size, data):
-    """Draw a QR-style pattern."""
-    module = max(2, size // 21)
-    random.seed(hash(data) % (2**31))
-
-    for row in range(21):
-        for col in range(21):
-            is_finder = (
-                (row < 7 and col < 7)
-                or (row < 7 and col > 13)
-                or (row > 13 and col < 7)
-            )
-            is_dark = is_finder or random.random() < 0.35
-            if is_dark:
-                draw.rectangle(
-                    [
-                        x + col * module,
-                        y + row * module,
-                        x + (col + 1) * module - 1,
-                        y + (row + 1) * module - 1,
-                    ],
-                    fill=0,
-                )
-    return data
+def upce_to_upca(upce7: str) -> str:
+    """UPC-E (sistema + 6 dígitos) → UPC-A de 11 dígitos (sin check)."""
+    ns, d = upce7[0], upce7[1:]
+    last = d[5]
+    if last in "012":
+        body = d[0:2] + last + "0000" + d[2:5]
+    elif last == "3":
+        body = d[0:3] + "00000" + d[3:5]
+    elif last == "4":
+        body = d[0:4] + "00000" + d[4]
+    else:
+        body = d[0:5] + "0000" + last
+    return ns + body
 
 
-def apply_scenario_effects(img, scenario_id, draw):
-    """Apply scenario-specific distortions."""
-    if scenario_id == "02_low_light":
-        enhancer = ImageEnhance.Brightness(img)
-        img = enhancer.enhance(0.15 + random.random() * 0.2)
+def content(fmt: str, rng: random.Random, dense: bool = False) -> str:
+    digits = lambda n: "".join(rng.choice(string.digits) for _ in range(n))  # noqa: E731
+    alnum = string.ascii_uppercase + string.digits
+    if fmt == "ean_13":
+        b = digits(12)
+        return b + gtin_check(b)
+    if fmt == "ean_8":
+        b = digits(7)
+        return b + gtin_check(b)
+    if fmt == "upc_a":
+        b = digits(11)
+        return b + gtin_check(b)
+    if fmt == "upc_e":
+        e = "0" + digits(5) + rng.choice("56789")
+        return e + gtin_check(upce_to_upca(e))
+    if fmt == "itf":
+        return digits(rng.choice([10, 14]))
+    if fmt == "codabar":
+        return rng.choice("ABCD") + digits(rng.randint(6, 12)) + rng.choice("ABCD")
+    if fmt in ("code_39", "code_93"):
+        return "".join(rng.choice(alnum + "-. ") for _ in range(rng.randint(5, 12))).strip() or "QHAGO"
+    if fmt == "code_128":
+        return "".join(rng.choice(alnum + "-/abcdefgh") for _ in range(rng.randint(6, 16)))
+    n = rng.randint(300, 900) if dense else rng.randint(12, 80)
+    pool = string.ascii_letters + string.digits + " -_/:.?=&"
+    text = "".join(rng.choice(pool) for _ in range(n))
+    return ("https://qhago.dev/" + text) if (not dense and rng.random() < 0.4) else text
 
-    elif scenario_id == "03_motion_blur":
-        angle = random.uniform(0, 360)
-        length = random.randint(8, 20)
-        img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(2, 5)))
 
-    elif scenario_id == "04_wrinkled":
-        img = img.rotate(random.uniform(-5, 5), expand=False, fillcolor=255)
-
-    elif scenario_id == "05_perspective":
-        w, h = img.size
-        img = img.transform(
-            (w, h),
-            Image.PERSPECTIVE,
-            [
-                1 + random.uniform(-0.2, 0.2),
-                random.uniform(-0.15, 0),
-                random.uniform(-0.15, 0),
-                random.uniform(-0.1, 0.1),
-                1 + random.uniform(-0.1, 0.3),
-                random.uniform(0, 0.1),
-                random.uniform(-0.001, 0.001),
-                random.uniform(-0.001, 0.001),
-            ],
-            Image.BILINEAR,
-            fillcolor=255,
-        )
-
-    elif scenario_id == "06_occluded":
-        w, h = img.size
-        occlusion_w = int(w * random.uniform(0.15, 0.40))
-        occlusion_h = int(h * random.uniform(0.15, 0.40))
-        ox = random.randint(0, w - occlusion_w)
-        oy = random.randint(0, h - occlusion_h)
-        draw.rectangle(
-            [ox, oy, ox + occlusion_w, oy + occlusion_h],
-            fill=(200 + random.randint(-20, 20)),
-            outline=(180),
-        )
-
-    elif scenario_id == "07_small":
-        pass
-
-    elif scenario_id == "08_multiple":
-        pass
-
-    elif scenario_id == "09_glare":
-        w, h = img.size
-        glare_x = random.randint(0, w // 2)
-        glare_y = random.randint(0, h // 2)
-        glare_r = random.randint(30, 80)
-        for _ in range(5):
-            draw.ellipse(
-                [
-                    glare_x - glare_r,
-                    glare_y - glare_r,
-                    glare_x + glare_r,
-                    glare_y + glare_r,
-                ],
-                fill=(255, 255, 255, 180),
-            )
-            glare_x += random.randint(-20, 20)
-            glare_y += random.randint(-20, 20)
-            glare_r = random.randint(20, 50)
-
-    elif scenario_id == "10_combined":
-        enhancer = ImageEnhance.Brightness(img)
-        img = enhancer.enhance(0.2 + random.random() * 0.2)
-        img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(1.5, 4)))
-        img = img.rotate(random.uniform(-20, 20), expand=False, fillcolor=255)
-
+def render(fmt: str, text: str, scale: int) -> np.ndarray | None:
+    try:
+        bc = zxingcpp.create_barcode(text, FORMATS[fmt])
+        img = np.array(bc.to_image(scale=scale, add_quiet_zones=True), dtype=np.uint8)
+    except Exception:
+        return None
+    if fmt in LINEAR and img.shape[0] < 60 * scale // 2:  # barras más altas para 1D
+        img = cv2.resize(img, (img.shape[1], max(img.shape[0], 40 * scale)), interpolation=cv2.INTER_NEAREST)
     return img
 
 
-def generate_dataset(output_dir, num_images=5000):
-    os.makedirs(output_dir, exist_ok=True)
+def verify(img: np.ndarray, fmt: str) -> str | None:
+    found = zxingcpp.read_barcodes(img, formats=FORMATS[fmt])
+    return found[0].text if found else None
 
-    for scenario_dir, _ in SCENARIOS:
-        os.makedirs(os.path.join(output_dir, scenario_dir), exist_ok=True)
 
-    images_per_scenario = num_images // len(SCENARIOS)
+def background(h: int, w: int, rng: random.Random) -> np.ndarray:
+    base = rng.randint(150, 235)
+    gx = np.linspace(-rng.randint(0, 40), rng.randint(0, 40), w)[None, :]
+    gy = np.linspace(-rng.randint(0, 40), rng.randint(0, 40), h)[:, None]
+    noise = np.random.default_rng(rng.randint(0, 2**31)).normal(0, rng.uniform(2, 10), (h, w))
+    return np.clip(base + gx + gy + noise, 0, 255).astype(np.uint8)
 
-    for scenario_dir, scenario_name in SCENARIOS:
-        print(f"Generating: {scenario_name}")
 
-        for i in range(images_per_scenario):
-            w, h = 640, 480
-            bg_color = (
-                random.randint(200, 255),
-                random.randint(200, 255),
-                random.randint(200, 255),
-            )
-            img = Image.new("RGB", (w, h), bg_color)
-            draw = ImageDraw.Draw(img)
+def paste(canvas: np.ndarray, sym: np.ndarray, x: int, y: int) -> list[list[float]]:
+    h, w = sym.shape
+    canvas[y:y + h, x:x + w] = np.minimum(canvas[y:y + h, x:x + w], sym)
+    return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
 
-            ground_truth = None
 
-            if scenario_dir == "08_multiple":
-                num_codes = random.randint(2, 5)
-                texts = []
-                for _ in range(num_codes):
-                    is_1d = random.random() < 0.5
-                    code_w = random.randint(60, 150)
-                    code_h = random.randint(30, 80)
-                    cx = random.randint(10, w - code_w - 10)
-                    cy = random.randint(10, h - code_h - 10)
+def warp_points(pts, m):
+    p = cv2.perspectiveTransform(np.array([pts], dtype=np.float32), m)[0]
+    return [[round(float(a), 1), round(float(b), 1)] for a, b in p]
 
-                    if is_1d:
-                        text = random.choice(BARCODE_TEXTS)
-                        generate_barcode_1d(draw, cx, cy, code_w, code_h, text)
-                        texts.append(text)
-                    else:
-                        text = random.choice(QR_TEXTS)
-                        code_size = min(code_w, code_h)
-                        generate_qr_style(draw, cx, cy, code_size, text)
-                        texts.append(text)
-                ground_truth = texts[0]
-            else:
-                is_1d = random.random() < 0.5
-                code_w = random.randint(80, 300) if scenario_dir != "07_small" else random.randint(20, 45)
-                code_h = random.randint(40, 120) if scenario_dir != "07_small" else random.randint(20, 45)
 
-                cx = random.randint(20, w - code_w - 20)
-                cy = random.randint(20, h - code_h - 20)
+def apply(scn: str, img: np.ndarray, corners: list, rng: random.Random):
+    h, w = img.shape
+    if scn == "low_light":
+        img = np.clip(img.astype(np.float32) * rng.uniform(0.15, 0.35)
+                      + np.random.default_rng(rng.randint(0, 2**31)).normal(0, 6, img.shape), 0, 255).astype(np.uint8)
+    elif scn == "motion_blur":
+        k = rng.randint(7, 17)
+        kern = np.zeros((k, k), np.float32)
+        kern[k // 2, :] = 1 / k
+        rot = cv2.getRotationMatrix2D((k / 2, k / 2), rng.uniform(0, 180), 1)
+        img = cv2.filter2D(img, -1, cv2.warpAffine(kern, rot, (k, k)))
+    elif scn == "defocus":
+        img = cv2.GaussianBlur(img, (0, 0), rng.uniform(1.8, 3.2))
+    elif scn == "perspective":
+        d = 0.28
+        src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+        dst = np.float32([[rng.uniform(0, d) * w, rng.uniform(0, d) * h], [w - rng.uniform(0, d) * w, rng.uniform(0, d) * h],
+                          [w - rng.uniform(0, d) * w, h - rng.uniform(0, d) * h], [rng.uniform(0, d) * w, h - rng.uniform(0, d) * h]])
+        m = cv2.getPerspectiveTransform(src, dst)
+        img = cv2.warpPerspective(img, m, (w, h), borderValue=200)
+        corners = [warp_points(c, m) for c in corners]
+    elif scn == "curved":
+        # Cilindro centrado en el código (no en el canvas) y con radio relativo a su ancho.
+        (x0, _), _, (x1, _), _ = corners[0]
+        cx, cw = (x0 + x1) / 2, max(x1 - x0, 1)
+        xs = np.arange(w, dtype=np.float32)
+        r = cw * rng.uniform(0.55, 0.9)
+        theta = (xs - cx) / r
+        src_x = (np.sin(np.clip(theta, -1.5, 1.5)) * r + cx).astype(np.float32)
+        map_x = np.tile(src_x, (h, 1))
+        map_y = np.tile(np.arange(h, dtype=np.float32)[:, None], (1, w))
+        shade = (0.75 + 0.25 * np.cos(theta))[None, :]
+        img = np.clip(cv2.remap(img, map_x, map_y, cv2.INTER_LINEAR, borderValue=200) * shade, 0, 255).astype(np.uint8)
+    elif scn == "glare":
+        yy, xx = np.mgrid[0:h, 0:w]
+        cx, cy, rad = rng.uniform(0.2, 0.8) * w, rng.uniform(0.2, 0.8) * h, rng.uniform(0.15, 0.35) * max(w, h)
+        g = np.exp(-(((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * rad ** 2))) * rng.uniform(120, 200)
+        img = np.clip(img.astype(np.float32) + g, 0, 255).astype(np.uint8)
+    elif scn == "screen":
+        yy, xx = np.mgrid[0:h, 0:w]
+        moire = 12 * np.sin(xx * rng.uniform(0.6, 1.4)) * np.sin(yy * rng.uniform(0.6, 1.4))
+        lines = (yy % rng.randint(3, 5) == 0) * -18
+        img = np.clip(img.astype(np.float32) * 0.8 + 30 + moire + lines, 0, 255).astype(np.uint8)
+    elif scn == "damaged":
+        for _ in range(rng.randint(1, 3)):
+            c = rng.choice(corners)
+            x0, y0 = c[0]
+            x1, y1 = c[2]
+            bw, bh = (x1 - x0) * rng.uniform(0.06, 0.15), (y1 - y0) * rng.uniform(0.15, 0.5)
+            px, py = rng.uniform(x0, x1 - bw), rng.uniform(y0, y1 - bh)
+            img[int(py):int(py + bh), int(px):int(px + bw)] = rng.choice([30, 225])
+    elif scn == "inverted":
+        img = 255 - img
+    return img, corners
 
-                if is_1d:
-                    ground_truth = random.choice(BARCODE_TEXTS)
-                    generate_barcode_1d(draw, cx, cy, code_w, code_h, ground_truth)
-                else:
-                    ground_truth = random.choice(QR_TEXTS)
-                    code_size = min(code_w, code_h)
-                    generate_qr_style(draw, cx, cy, code_size, ground_truth)
 
-                img = apply_scenario_effects(img, scenario_dir, draw)
+def make_sample(scn: str, idx: int, rng: random.Random):
+    fmts = list(FORMATS)
+    if scn == "dense_2d":
+        fmts = ["qr_code", "data_matrix", "pdf417", "aztec"]
+    n_codes = rng.randint(2, 4) if scn == "multi" else 1
+    W, H = rng.choice([(1280, 720), (960, 720), (1024, 768)])
+    canvas = background(H, W, rng)
+    codes, boxes = [], []
+    tries = 0
+    while len(codes) < n_codes and tries < 20:
+        tries += 1
+        fmt = rng.choice(fmts)
+        text = content(fmt, rng, dense=scn == "dense_2d")
+        scale = 1 if scn == "small" else rng.randint(2, 4)
+        sym = render(fmt, text, scale)
+        if sym is None:
+            continue
+        expected = verify(sym, fmt)
+        if expected is None:
+            continue
+        if scn != "small":  # tamaño aleatorio realista
+            f = rng.uniform(0.25, 0.55) * W / max(sym.shape[1], 1)
+            if n_codes > 1:
+                f *= 0.6
+            sym = cv2.resize(sym, None, fx=f, fy=f, interpolation=cv2.INTER_AREA if f < 1 else cv2.INTER_LINEAR)
+        h, w = sym.shape
+        if w >= W - 10 or h >= H - 10:
+            continue
+        for _ in range(30):
+            x, y = rng.randint(5, W - w - 5), rng.randint(5, H - h - 5)
+            if all(x + w < bx or bx + bw < x or y + h < by or by + bh < y for bx, by, bw, bh in boxes):
+                break
+        else:
+            continue
+        boxes.append((x, y, w, h))
+        codes.append({"format": fmt, "text": expected, "corners": paste(canvas, sym, x, y)})
+    if not codes:
+        return None
+    corners = [c["corners"] for c in codes]
+    img, corners = apply(scn, canvas, corners, rng)
+    for c, k in zip(codes, corners):
+        c["corners"] = k
+    if scn == "multi" and rng.random() < 0.5:  # multi también con un efecto suave
+        img = cv2.GaussianBlur(img, (0, 0), 0.8)
+    return img, codes
 
-            image_path = os.path.join(
-                output_dir, scenario_dir, f"image_{i:05d}.png"
-            )
-            img.save(image_path)
 
-            if ground_truth:
-                truth_path = image_path.replace(".png", ".json")
-                with open(truth_path, "w") as f:
-                    json.dump({"text": ground_truth, "format": "1d" if is_1d else "qr"}, f)
-
-        print(f"  Generated {images_per_scenario} images")
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--per-scenario", type=int, default=100)
+    ap.add_argument("--seed", type=int, default=7)
+    a = ap.parse_args()
+    rng = random.Random(a.seed)
+    (a.out / "images").mkdir(parents=True, exist_ok=True)
+    lines = []
+    for scn in SCENARIOS:
+        made = 0
+        while made < a.per_scenario:
+            s = make_sample(scn, made, rng)
+            if s is None:
+                continue
+            img, codes = s
+            sid = f"syn-{scn}-{made:04d}"
+            rel = f"images/{sid}.jpg"
+            ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, rng.randint(55, 95)])
+            assert ok
+            (a.out / rel).write_bytes(buf.tobytes())
+            lines.append({
+                "id": sid, "file": rel, "sha256": hashlib.sha256(buf.tobytes()).hexdigest(), "kind": "image",
+                "codes": codes, "complete": True, "scenarios": [scn], "device": "synthetic",
+                "resolution": [img.shape[1], img.shape[0]], "source": "synthetic", "license": "own",
+                "object": sid,  # cada muestra sintética es su propio "objeto" para el bootstrap
+                "split": "test" if rng.random() < 0.3 else "dev",
+            })
+            made += 1
+        print(f"{scn}: {made}")
+    # Negativas: fondos con texturas de barras/rejas sin códigos.
+    for i in range(max(10, a.per_scenario // 2)):
+        W, H = 1280, 720
+        img = background(H, W, rng)
+        for _ in range(rng.randint(5, 20)):
+            x = rng.randint(0, W - 40)
+            cv2.rectangle(img, (x, rng.randint(0, H // 2)), (x + rng.randint(2, 12), rng.randint(H // 2, H)), rng.randint(20, 90), -1)
+        cv2.putText(img, "QHAGO 1234 ABCD", (rng.randint(0, 400), rng.randint(100, 600)), cv2.FONT_HERSHEY_SIMPLEX, 2, 40, 3)
+        sid = f"syn-negative-{i:04d}"
+        rel = f"images/{sid}.jpg"
+        ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        (a.out / rel).write_bytes(buf.tobytes())
+        lines.append({"id": sid, "file": rel, "sha256": hashlib.sha256(buf.tobytes()).hexdigest(), "kind": "image",
+                      "codes": [], "complete": True, "scenarios": ["negative"], "device": "synthetic",
+                      "resolution": [W, H], "source": "synthetic", "license": "own", "object": sid,
+                      "split": "test" if rng.random() < 0.3 else "dev"})
+    (a.out / "manifest.jsonl").write_text("".join(json.dumps(l, ensure_ascii=False) + "\n" for l in lines))
+    print(f"{len(lines)} muestras → {a.out / 'manifest.jsonl'}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate benchmark dataset")
-    parser.add_argument(
-        "--num-images",
-        type=int,
-        default=5000,
-        help="Total number of images to generate",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="./images",
-        help="Output directory for dataset",
-    )
-    args = parser.parse_args()
-    generate_dataset(args.output_dir, args.num_images)
+    main()

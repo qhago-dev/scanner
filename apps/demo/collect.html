@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qhago — captura y etiquetado del dataset</title>
+    <link rel="stylesheet" href="/src/collect.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Captura de dataset</h1>
+      <p class="hint">
+        F1.2 · Cada línea exportada sigue <code>bench/dataset/manifest.schema.json</code>. Antes de exportar revisa la
+        privacidad (ADR-12): nada de documentos de identidad, envíos reales de terceros, caras ni pantallas con datos.
+      </p>
+    </header>
+
+    <main>
+      <section class="camera">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="row">
+          <select id="camera" aria-label="Cámara"></select>
+          <button type="button" id="start">Iniciar cámara</button>
+        </div>
+        <div class="row">
+          <button type="button" id="shot-ref" disabled>📷 Referencia limpia</button>
+          <button type="button" id="shot" disabled>📷 Foto</button>
+          <button type="button" id="rec" disabled>⏺ Vídeo</button>
+          <label><input type="checkbox" id="negative" /> Negativa (sin códigos)</label>
+        </div>
+        <div class="row">
+          <label>Objeto <input id="object" size="12" /></label>
+          <button type="button" id="new-object">Nuevo objeto</button>
+          <label>Dispositivo <input id="device" size="22" /></label>
+        </div>
+      </section>
+
+      <section class="label">
+        <h2>Muestra actual</h2>
+        <canvas id="preview" width="640" height="360"></canvas>
+        <p class="hint" id="corner-hint" hidden>Modo esquinas: haz clic en las 4 esquinas (TL, TR, BR, BL) del código seleccionado.</p>
+        <div id="codes"></div>
+        <div class="row">
+          <button type="button" id="add-code">+ Código manual</button>
+          <button type="button" id="corners">✚ Esquinas a mano</button>
+          <label><input type="checkbox" id="complete" checked /> Todos los códigos visibles están etiquetados</label>
+        </div>
+        <fieldset id="scenarios">
+          <legend>Escenarios</legend>
+        </fieldset>
+        <fieldset>
+          <legend>Privacidad (obligatorio)</legend>
+          <label><input type="checkbox" id="privacy" /> Revisado: sin datos personales reales (o difuminados)</label>
+        </fieldset>
+        <div class="row">
+          <label>Licencia <input id="license" value="own" size="10" /></label>
+          <button type="button" id="pick-dir">Carpeta del dataset…</button>
+          <button type="button" id="save" disabled>💾 Guardar muestra</button>
+          <span id="status"></span>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/collect.ts"></script>
+  </body>
+</html>

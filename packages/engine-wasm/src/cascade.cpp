@@ -207,7 +207,11 @@ Outcome RunCascade(const uint8_t* src, int W, int H, const int32_t* o) {
     return r;
   };
 
-  // Ejecuta una pasada; devuelve true si hay que parar (hay resultados o se agotó el tiempo).
+  const size_t maxSymbols = o[kMaxSymbols] > 0 ? static_cast<size_t>(o[kMaxSymbols]) : 255;
+
+  // Ejecuta una pasada; devuelve true si hay que parar: se agotó el tiempo, se alcanzó maxSymbols,
+  // o ya hay resultados (salvo tras "fast" en balanced/thorough con maxSymbols > 1: la pasada rápida
+  // suele encontrar solo uno de varios códigos, así que se completa con "harder" y se combinan).
   auto run = [&](const View& v, bool harder, const char* pass) {
     if (!out.passes.empty() && NowMs() - t0 > budget) {
       out.budgetExceeded = true;
@@ -215,7 +219,9 @@ Outcome RunCascade(const uint8_t* src, int W, int H, const int32_t* o) {
     }
     out.passes.push_back(pass);
     col.Add(ZXing::ReadBarcodes(v.img, optsFor(harder)), v, pass);
-    return !out.results.empty();
+    if (out.results.size() >= maxSymbols) return true;
+    const bool firstFast = out.passes.size() == 1 && strategy >= 1;
+    return !out.results.empty() && !firstFast;
   };
   auto done = [&]() { out.ms = NowMs() - t0; return out; };
 
@@ -224,6 +230,7 @@ Outcome RunCascade(const uint8_t* src, int W, int H, const int32_t* o) {
 
   if (run(base, false, "fast")) return done();
   if (strategy >= 1 && run(base, true, "harder")) return done();
+  if (!out.results.empty()) return done();  // "harder" ya completó lo de "fast"
 
   // Las pasadas con preproceso trabajan sobre la base (reducida o no) en copia contigua.
   const Luma& bl = reduced.px.empty() ? contiguous() : reduced;
@@ -232,6 +239,12 @@ Outcome RunCascade(const uint8_t* src, int W, int H, const int32_t* o) {
     return View{n, ZXing::ImageView(l.px.data(), l.w, l.h, ZXing::ImageFormat::Lum), ox, oy, s};
   };
 
+  if (strategy >= 1 && Pick(o[kTryInvert], 1) == 1) {
+    // Inversión propia de la luminancia: tryInvert de ZXing no cubre todos los casos 1D.
+    Luma inv(bl.w, bl.h);
+    for (size_t i = 0; i < inv.px.size(); ++i) inv.px[i] = static_cast<uint8_t>(255 - bl.px[i]);
+    if (run(viewOf("inverted", inv, 0, 0, bs), true, "inverted")) return done();
+  }
   if (pre & kPreClahe) {
     const Luma c = Clahe(bl.px.data(), bl.w, bl.h);
     if (run(viewOf("clahe", c, 0, 0, bs), true, "clahe")) return done();

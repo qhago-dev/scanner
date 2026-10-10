@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhago.dev/bench/manifest.schema.json",
+  "title": "Muestra del dataset de benchmark (una línea de manifest.jsonl)",
+  "type": "object",
+  "required": [
+    "id",
+    "file",
+    "sha256",
+    "kind",
+    "codes",
+    "complete",
+    "scenarios",
+    "source",
+    "license",
+    "object",
+    "split"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "file": { "type": "string", "description": "Ruta relativa al manifest" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "kind": { "enum": ["image", "video"] },
+    "codes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["format", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "format": {
+            "enum": [
+              "aztec",
+              "codabar",
+              "code_39",
+              "code_93",
+              "code_128",
+              "data_matrix",
+              "ean_8",
+              "ean_13",
+              "itf",
+              "pdf417",
+              "qr_code",
+              "upc_a",
+              "upc_e"
+            ]
+          },
+          "text": { "type": "string" },
+          "corners": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "number" }
+            }
+          },
+          "firstVisibleMs": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "complete": {
+      "type": "boolean",
+      "description": "true si TODOS los códigos visibles están etiquetados"
+    },
+    "scenarios": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "device": { "type": "string" },
+    "resolution": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer" } },
+    "fps": { "type": "number" },
+    "source": { "type": "string" },
+    "license": { "type": "string", "description": "own | CC0-1.0 | CC-BY-4.0 | research-only | …" },
+    "object": { "type": "string", "description": "Objeto físico: agrupa splits y bootstrap" },
+    "split": { "enum": ["dev", "test"] },
+    "privacyReviewed": { "type": "boolean" }
+  }
+}

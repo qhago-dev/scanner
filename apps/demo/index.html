@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qhago Scanner — demo</title>
+  </head>
+  <body>
+    <h1>Qhago Scanner</h1>
+    <p>Demo en construcción (F3). Mientras tanto: <a href="/collect.html">herramienta de captura del dataset</a>.</p>
+    <input type="file" id="file" accept="image/*" />
+    <pre id="out"></pre>
+    <script type="module">
+      import { decode, FORMATS } from "@qhago/scanner";
+
+      document.getElementById("file").onchange = async (e) => {
+        const f = e.target.files[0];
+        const t = performance.now();
+        const r = await decode(f, { formats: FORMATS, strategy: "thorough" });
+        document.getElementById("out").textContent =
+          `${(performance.now() - t).toFixed(0)} ms\n${JSON.stringify(r.map(({ bytes, ...x }) => x), null, 2)}`;
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qhago — benchmark en dispositivo</title>
+  </head>
+  <body style="font-family: system-ui; max-width: 900px; margin: auto; padding: 1rem">
+    <h1>Benchmark en dispositivo</h1>
+    <p>
+      Corre qhago, zxing-wasm y <code>BarcodeDetector</code> nativo (si existe) sobre un dataset servido por HTTP
+      (carpeta con <code>manifest.jsonl</code>, p. ej. <code>bunx serve bench/dataset/real --cors</code>) y descarga el JSON
+      para <code>bench/</code> (F1.8).
+    </p>
+    <label>URL base del dataset <input id="base" size="50" value="/dataset/" /></label>
+    <label>Split <select id="split"><option>dev</option><option>test</option></select></label>
+    <label>Límite <input id="limit" type="number" value="200" /></label>
+    <button type="button" id="run">Ejecutar</button>
+    <pre id="log"></pre>
+    <script type="module" src="/src/bench.ts"></script>
+  </body>
+</html>

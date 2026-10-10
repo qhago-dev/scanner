@@ -49,3 +49,8 @@ apps/demo/captures/
 
 # Legado no versionado
 core/
+bench/.pydeps/
+!bench/dataset/real/README.md
+bench/dataset/real/manifest.jsonl
+bench/dataset/zxing/
+packages/scanner/test/.cache/

@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+body {
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 1rem;
+}
+main {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+video,
+canvas {
+  width: 100%;
+  background: #111;
+  border-radius: 8px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.hint {
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+.code {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto auto;
+  gap: 0.4rem;
+  margin: 0.3rem 0;
+}
+.code.agree input {
+  outline: 2px solid #2a2;
+}
+.code.disagree input {
+  outline: 2px solid #d80;
+}
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+button {
+  padding: 0.4rem 0.8rem;
+}

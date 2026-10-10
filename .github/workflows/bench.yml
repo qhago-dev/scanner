@@ -1,0 +1,38 @@
+# Benchmark nocturno: SOLO split dev (F1). El split test se corre a mano con --reason.
+name: Bench (nocturno)
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "6.0.2"
+      - run: pip install pillow numpy opencv-python-headless && pip install --target bench/.pydeps zxing-cpp
+      - run: bash packages/engine-wasm/build.sh all && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
+      - run: bun install --frozen-lockfile && bun run --filter @qhago/scanner build
+      - run: bun run bench/dataset/zxing.ts
+      - run: PYTHONPATH=bench/.pydeps python3 bench/dataset/synthetic/generate.py --out bench/dataset/synthetic/out --per-scenario 100 --seed 7
+      - name: Dataset real (si hay credenciales)
+        env:
+          BENCH_DATASET_URL: ${{ secrets.BENCH_DATASET_URL }}
+          BENCH_DATASET_TOKEN: ${{ secrets.BENCH_DATASET_TOKEN }}
+        run: bun run bench/dataset/fetch.ts
+      - run: |
+          cd bench
+          bun run cli.ts --dataset zxing --split dev --out results/nightly
+          bun run cli.ts --dataset synthetic --split dev --out results/nightly
+          [ -f dataset/real/manifest.jsonl ] && bun run cli.ts --dataset real --split dev --out results/nightly || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench/results/nightly

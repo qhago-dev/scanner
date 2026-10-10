@@ -76,7 +76,13 @@ export function imagesIn(dir: string): Sample[] {
 }
 
 export function matches(s: Sample, r: { text: string; bytes: Uint8Array }): boolean {
-  if (s.expected !== null) return r.text === s.expected || r.text === s.expected.trimEnd();
+  // Los samples de UPC-A traen la forma GTIN-13 (con 0 inicial); el SDK reporta UPC-A con 12 dígitos.
+  if (s.expected !== null)
+    return (
+      r.text === s.expected ||
+      r.text === s.expected.trimEnd() ||
+      `0${r.text}` === s.expected.trimEnd()
+    );
   if (s.expectedBytes)
     return (
       r.bytes.length === s.expectedBytes.length &&

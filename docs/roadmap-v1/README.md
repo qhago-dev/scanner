@@ -93,7 +93,7 @@ La v1.0.0 está lista para publicar cuando **todos** estos puntos están en verd
 | # | Fase | Entregable | Depende de | Esfuerzo | Versión | Estado |
 |---|------|-----------|-----------|----------|---------|--------|
 | 0 | [Saneamiento y base](./fase-0-saneamiento/) | Repo limpio, monorepo, CI, nombre del paquete, pipeline de pre-release | — | 4-5 d | — | Hecha (local; externas pendientes) |
-| 1 | [Dataset y benchmark real](./fase-1-benchmark/) | Harness reproducible + baseline de competidores | F0 | 10-13 d (incluye 5-7 persona-días de captura) | — | Pendiente |
+| 1 | [Dataset y benchmark real](./fase-1-benchmark/) | Harness reproducible + baseline de competidores | F0 | 10-13 d (incluye 5-7 persona-días de captura) | — | Tooling hecho; dataset real pendiente (autor) |
 | 2 | [Motor de decodificación](./fase-2-motor/) | WASM propio + `decode(image)` universal | F0 (gate G2 requiere F1) | 6-8 d | pre-tag `alpha` | Hecha (G2 vs competidores pendiente de F1) |
 | 3 | [Scanner de cámara](./fase-3-camara/) | `createScanner()` en Worker + fusión multi-frame | F2 (gate G3 requiere F1) | 7-9 d | pre-tag `alpha` | Pendiente |
 | 4 | [API pública y DX](./fase-4-api-dx/) | API congelada, polyfill, compat Quagga, UI, parsers | F3 | 5-6 d | pre-tag `beta` | Pendiente |

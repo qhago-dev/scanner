@@ -91,3 +91,9 @@ Resultados y decisiones tomadas al implementar:
 - **Bug encontrado por los tests de navegador**: con memoria crecible, Emscripten 6 usa un ArrayBuffer redimensionable y `TextDecoder` lo rechaza en Chromium/Firefox → lectura del JSON con copia (`cString`).
 - Tamaños: WASM navegador 618 KB / **317 KB gzip**, node 642 / 328 KB; JS gzip: entrada navegador 7,4 KB, worker 6,4 KB, node 5,9 KB.
 - Tests: 64 en Node (unit + integración + SSR), 3 en Bun, 7 × 2 en navegador (Chromium y Firefox). **WebKit pendiente**: falta `libavif16` en el sistema (`sudo apt-get install libavif16`).
+
+### Correcciones tras el primer benchmark (F1)
+- **Multi-código**: la cascada paraba en la primera pasada con lecturas y "fast" suele encontrar solo uno de varios códigos (12 % vs 50 % de zxing-wasm en `multi`). Ahora, con `maxSymbols` > 1, balanced/thorough completan con "harder" y combinan; el preproceso solo corre si no hay lecturas. `maxSymbols: 1` mantiene la salida rápida.
+- **Invertidos**: pasada propia con luminancia invertida (27 % → 98,5 % en `inverted`; zxing-wasm 27 %).
+- **UPC-A**: ZXing v3 da UPC-A en forma GTIN-13 y como EAN-13 si se piden ambos; el SDK normaliza a `upc_a` de 12 dígitos cuando se pidió `upc_a` (como BarcodeDetector y Quagga2).
+- Coste: p95 de balanced sube en imágenes que fallan (más pasadas); acotable con `timeBudgetMs`.

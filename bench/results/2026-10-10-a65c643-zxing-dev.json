@@ -1,0 +1,337 @@
+{
+  "meta": {
+    "dataset": "zxing",
+    "split": "dev",
+    "date": "2026-10-10",
+    "commit": "a65c643",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+    "runtime": "Bun 1.3.12"
+  },
+  "engines": [
+    {
+      "name": "qhago",
+      "version": "0.0.0",
+      "notes": "strategy balanced, los 13 formatos, validateChecksums por defecto"
+    },
+    {
+      "name": "zxing-wasm",
+      "version": "3.1.5",
+      "notes": "readBarcodes con tryHarder y textMode Plain (igual que qhago), todos los formatos; se filtran a los 13 de 1.0"
+    },
+    {
+      "name": "zxing-js",
+      "version": "0.21.3",
+      "notes": "MultiFormatReader + HybridBinarizer, TRY_HARDER; lee 1 código por imagen"
+    },
+    {
+      "name": "quagga2",
+      "version": "1.12.1",
+      "notes": "decodeSingle con locate:true, size 800, todos sus readers 1D; en Node solo acepta rutas (incluye su propio decode de la imagen)"
+    }
+  ],
+  "global": {
+    "qhago": {
+      "samples": 623,
+      "positives": 577,
+      "negatives": 46,
+      "recallSample": 0.9150779896013865,
+      "recallCode": 0.9150779896013865,
+      "reads": 533,
+      "falseReads": 3,
+      "falseReadRate": 0.005628517823639775,
+      "negativesFp": 0,
+      "p50": 2.1238269999994372,
+      "p95": 34.912185999997746,
+      "p99": 58.13167900000008,
+      "errors": 0
+    },
+    "zxing-wasm": {
+      "samples": 623,
+      "positives": 577,
+      "negatives": 46,
+      "recallSample": 0.8752166377816292,
+      "recallCode": 0.8752166377816292,
+      "reads": 510,
+      "falseReads": 2,
+      "falseReadRate": 0.00392156862745098,
+      "negativesFp": 0,
+      "p50": 3.375964999999269,
+      "p95": 20.06586100000277,
+      "p99": 39.429443999999876,
+      "errors": 0
+    },
+    "zxing-js": {
+      "samples": 623,
+      "positives": 577,
+      "negatives": 46,
+      "recallSample": 0.5909878682842288,
+      "recallCode": 0.5909878682842288,
+      "reads": 357,
+      "falseReads": 10,
+      "falseReadRate": 0.028011204481792718,
+      "negativesFp": 0.06521739130434782,
+      "p50": 5.40610099999958,
+      "p95": 98.50668399999995,
+      "p99": 160.41853700000138,
+      "errors": 0
+    },
+    "quagga2": {
+      "samples": 623,
+      "positives": 577,
+      "negatives": 46,
+      "recallSample": 0.1369150779896014,
+      "recallCode": 0.1369150779896014,
+      "reads": 109,
+      "falseReads": 12,
+      "falseReadRate": 0.11009174311926606,
+      "negativesFp": 0.06521739130434782,
+      "p50": 36.84723599999961,
+      "p95": 64.34992200000124,
+      "p99": 83.50187599999481,
+      "errors": 0
+    }
+  },
+  "byScenario": {
+    "qhago": {
+      "negative": {
+        "samples": 46,
+        "positives": 0,
+        "negatives": 46,
+        "recallSample": null,
+        "recallCode": null,
+        "reads": 0,
+        "falseReads": 0,
+        "falseReadRate": 0,
+        "negativesFp": 0,
+        "p50": 36.12122100000124,
+        "p95": 63.66881099999955,
+        "p99": 78.75003099999958,
+        "errors": 0
+      },
+      "zxing-regression": {
+        "samples": 577,
+        "positives": 577,
+        "negatives": 0,
+        "recallSample": 0.9150779896013865,
+        "recallCode": 0.9150779896013865,
+        "reads": 533,
+        "falseReads": 3,
+        "falseReadRate": 0.005628517823639775,
+        "negativesFp": null,
+        "p50": 1.9797319999997853,
+        "p95": 10.099442999999155,
+        "p99": 28.990797999998904,
+        "errors": 0
+      }
+    },
+    "zxing-wasm": {
+      "negative": {
+        "samples": 46,
+        "positives": 0,
+        "negatives": 46,
+        "recallSample": null,
+        "recallCode": null,
+        "reads": 0,
+        "falseReads": 0,
+        "falseReadRate": 0,
+        "negativesFp": 0,
+        "p50": 17.68604899999991,
+        "p95": 33.23280700000032,
+        "p99": 42.3847330000026,
+        "errors": 0
+      },
+      "zxing-regression": {
+        "samples": 577,
+        "positives": 577,
+        "negatives": 0,
+        "recallSample": 0.8752166377816292,
+        "recallCode": 0.8752166377816292,
+        "reads": 510,
+        "falseReads": 2,
+        "falseReadRate": 0.00392156862745098,
+        "negativesFp": null,
+        "p50": 3.2243669999988924,
+        "p95": 10.871864000000642,
+        "p99": 39.429443999999876,
+        "errors": 0
+      }
+    },
+    "zxing-js": {
+      "negative": {
+        "samples": 46,
+        "positives": 0,
+        "negatives": 46,
+        "recallSample": null,
+        "recallCode": null,
+        "reads": 3,
+        "falseReads": 3,
+        "falseReadRate": 1,
+        "negativesFp": 0.06521739130434782,
+        "p50": 118.84121800000139,
+        "p95": 168.44723100000192,
+        "p99": 188.7721559999991,
+        "errors": 0
+      },
+      "zxing-regression": {
+        "samples": 577,
+        "positives": 577,
+        "negatives": 0,
+        "recallSample": 0.5909878682842288,
+        "recallCode": 0.5909878682842288,
+        "reads": 354,
+        "falseReads": 7,
+        "falseReadRate": 0.01977401129943503,
+        "negativesFp": null,
+        "p50": 4.609769000000597,
+        "p95": 46.08261299999867,
+        "p99": 71.18761199999972,
+        "errors": 0
+      }
+    },
+    "quagga2": {
+      "negative": {
+        "samples": 46,
+        "positives": 0,
+        "negatives": 46,
+        "recallSample": null,
+        "recallCode": null,
+        "reads": 3,
+        "falseReads": 3,
+        "falseReadRate": 1,
+        "negativesFp": 0.06521739130434782,
+        "p50": 55.30593499999668,
+        "p95": 72.18437100000301,
+        "p99": 82.09911700000157,
+        "errors": 0
+      },
+      "zxing-regression": {
+        "samples": 577,
+        "positives": 577,
+        "negatives": 0,
+        "recallSample": 0.1369150779896014,
+        "recallCode": 0.1369150779896014,
+        "reads": 106,
+        "falseReads": 9,
+        "falseReadRate": 0.08490566037735849,
+        "negativesFp": null,
+        "p50": 35.42767299999832,
+        "p95": 63.51681500000268,
+        "p99": 83.52809200000047,
+        "errors": 0
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "engine": "zxing-wasm",
+      "recall": {
+        "diff": 0.03986135181975736,
+        "lo": 0.024263431542461005,
+        "hi": 0.05719237435008666,
+        "n": 577,
+        "objects": 577,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0,
+        "lo": 0,
+        "hi": 0,
+        "n": 553,
+        "objects": 553,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "negative": {
+          "diff": null,
+          "lo": null,
+          "hi": null,
+          "n": 0,
+          "objects": 0,
+          "verdict": "sin gate (n<60)"
+        },
+        "zxing-regression": {
+          "diff": 0.03986135181975736,
+          "lo": 0.024263431542461005,
+          "hi": 0.05719237435008666,
+          "n": 577,
+          "objects": 577,
+          "verdict": "mejor"
+        }
+      }
+    },
+    {
+      "engine": "zxing-js",
+      "recall": {
+        "diff": 0.3240901213171577,
+        "lo": 0.28596187175043325,
+        "hi": 0.36221837088388215,
+        "n": 577,
+        "objects": 577,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0.022670025188916875,
+        "lo": 0.010075566750629723,
+        "hi": 0.037783375314861464,
+        "n": 397,
+        "objects": 397,
+        "verdict": "mejor"
+      },
+      "perScenario": {
+        "negative": {
+          "diff": null,
+          "lo": null,
+          "hi": null,
+          "n": 0,
+          "objects": 0,
+          "verdict": "sin gate (n<60)"
+        },
+        "zxing-regression": {
+          "diff": 0.3240901213171577,
+          "lo": 0.28596187175043325,
+          "hi": 0.36221837088388215,
+          "n": 577,
+          "objects": 577,
+          "verdict": "mejor"
+        }
+      }
+    },
+    {
+      "engine": "quagga2",
+      "recall": {
+        "diff": 0.7781629116117851,
+        "lo": 0.7417677642980935,
+        "hi": 0.8110918544194108,
+        "n": 577,
+        "objects": 577,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0.07947019867549669,
+        "lo": 0.039735099337748346,
+        "hi": 0.12582781456953643,
+        "n": 151,
+        "objects": 151,
+        "verdict": "mejor"
+      },
+      "perScenario": {
+        "negative": {
+          "diff": null,
+          "lo": null,
+          "hi": null,
+          "n": 0,
+          "objects": 0,
+          "verdict": "sin gate (n<60)"
+        },
+        "zxing-regression": {
+          "diff": 0.7781629116117851,
+          "lo": 0.7417677642980935,
+          "hi": 0.8110918544194108,
+          "n": 577,
+          "objects": 577,
+          "verdict": "mejor"
+        }
+      }
+    }
+  ]
+}

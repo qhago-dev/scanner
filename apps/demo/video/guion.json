@@ -1,0 +1,123 @@
+[
+  {
+    "slide": 1,
+    "sub": "Hola. Te presento @qhago/scanner: un lector de códigos de barras y QR para la web, Node y Bun. En unos minutos verás cómo funciona por dentro y todas las formas de usarlo.",
+    "tts": "Hola. Te presento jago escáner: un lector de códigos de barras y cu erre para la web, nóud y ban. En unos minutos verás cómo funciona por dentro, y todas las formas de usarlo."
+  },
+  {
+    "slide": 2,
+    "sub": "Nació como alternativa a QuaggaJS, que solo lee códigos lineales y en nuestras pruebas acierta menos de la mitad de las veces. Queríamos los trece formatos estándar, leer mejor en fotos difíciles, una cámara fluida y la misma API en todos los entornos.",
+    "tts": "Nació como alternativa a cuága jota ese, que solo lee códigos lineales, y en nuestras pruebas acierta menos de la mitad de las veces. Queríamos los trece formatos estándar, leer mejor en fotos difíciles, una cámara fluida, y la misma interfaz en todos los entornos."
+  },
+  {
+    "slide": 3,
+    "sub": "La arquitectura es sencilla. Tu código vive en el hilo principal; los frames viajan a un Web Worker, donde corre el motor ZXing compilado a WebAssembly, el tracking y la fusión. De vuelta solo llegan eventos, así la interfaz nunca se traba.",
+    "tts": "La arquitectura es sencilla. Tu código vive en el hilo principal; los frames viajan a un uéb uórker, donde corre el motor zeta-ksing compilado a uéb asémbli, junto con el seguimiento y la fusión. De vuelta solo llegan eventos, así la interfaz nunca se traba."
+  },
+  {
+    "slide": 4,
+    "sub": "El motor aplica una cascada de mejoras: realce de contraste, nitidez, ampliación e inversión de colores. Tú eliges la estrategia: rápida, equilibrada o exhaustiva. Y se detiene en cuanto tiene una lectura válida, con su dígito de control verificado.",
+    "tts": "El motor aplica una cascada de mejoras: realce de contraste, nitidez, ampliación, e inversión de colores. Tú eliges la estrategia: rápida, equilibrada, o exhaustiva. Y se detiene en cuanto tiene una lectura válida, con su dígito de control verificado."
+  },
+  {
+    "slide": 5,
+    "sub": "En vídeo, cada código recibe un identificador estable entre frames. Los formatos propensos a errores necesitan dos frames que coincidan. Si un código se resiste, el motor insiste solo en esa zona. Y los eventos te dicen si es un candidato, una lectura confirmada o un código que desapareció.",
+    "tts": "En vídeo, cada código recibe un identificador estable entre frames. Los formatos propensos a errores necesitan dos frames que coincidan. Si un código se resiste, el motor insiste solo en esa zona. Y los eventos te dicen si es un candidato, una lectura confirmada, o un código que desapareció."
+  },
+  {
+    "slide": 6,
+    "sub": "Vamos con las formas de usarlo. La primera: decode, para imágenes y archivos.",
+    "tts": "Vamos con las formas de usarlo. La primera: dicóud, para imágenes y archivos."
+  },
+  {
+    "slide": 7,
+    "sub": "En el navegador le pasas un archivo, una imagen o un canvas, y recibes una lista de resultados con el formato, el texto, las cuatro esquinas y una confianza. Por debajo usa un worker automáticamente, y acepta región, límite de tiempo y cancelación.",
+    "tts": "En el navegador le pasas un archivo, una imagen o un canvas, y recibes una lista de resultados con el formato, el texto, las cuatro esquinas, y una confianza. Por debajo usa un uórker automáticamente, y acepta región, límite de tiempo, y cancelación."
+  },
+  {
+    "slide": 8,
+    "sub": "En Node y en Bun es exactamente la misma función: le das el contenido de un PNG o un JPEG. Los resultados son idénticos a los del navegador, y todos los errores llegan tipados, con un código y un enlace a la documentación.",
+    "tts": "En nóud y en ban es exactamente la misma función: le das el contenido de un pe ene ge o un jota peg. Los resultados son idénticos a los del navegador, y todos los errores llegan tipados, con un código y un enlace a la documentación."
+  },
+  {
+    "slide": 9,
+    "sub": "La segunda forma: createScanner, para escanear con la cámara.",
+    "tts": "La segunda forma: criéit escáner, para escanear con la cámara."
+  },
+  {
+    "slide": 10,
+    "sub": "Creas el escáner con tu elemento de vídeo, los formatos y, si quieres, una región de interés. Escuchas detect para las lecturas confirmadas y track para dibujar el recuadro encima del vídeo. Llamas a start, y listo.",
+    "tts": "Creas el escáner con tu elemento de vídeo, los formatos, y si quieres, una región de interés. Escuchas, ditéct, para las lecturas confirmadas, y trak, para dibujar el recuadro encima del vídeo. Llamas a start, y listo."
+  },
+  {
+    "slide": 11,
+    "sub": "Tienes control total: pausar, reanudar, detener y destruir sin fugas de memoria. Linterna, zoom y cambio de cámara. Además elige sola la cámara trasera principal, no la gran angular que no enfoca de cerca.",
+    "tts": "Tienes control total: pausar, reanudar, detener, y destruir sin fugas de memoria. Linterna, zoom, y cambio de cámara. Además elige sola la cámara trasera principal, no la gran angular que no enfoca de cerca."
+  },
+  {
+    "slide": 12,
+    "sub": "La tercera forma es para quien no quiere escribir código de cámara.",
+    "tts": "La tercera forma es para quien no quiere escribir código de cámara."
+  },
+  {
+    "slide": 13,
+    "sub": "El componente qhago-scanner es una etiqueta HTML. Le pones los formatos, la región, botones de linterna y de cambio de cámara, sonido y vibración. Escuchas el evento detect, y ya tienes un lector accesible y personalizable con CSS.",
+    "tts": "El componente jago escáner es una etiqueta jache te eme ele. Le pones los formatos, la región, botones de linterna y de cambio de cámara, sonido, y vibración. Escuchas el evento ditéct, y ya tienes un lector accesible y personalizable con ce ese ese."
+  },
+  {
+    "slide": 14,
+    "sub": "Si ya usas la API estándar BarcodeDetector, que solo existe en algunos navegadores, instala el polyfill. Tu mismo código funcionará en Firefox, Safari y hasta en Node.",
+    "tts": "Si ya usas la interfaz estándar barcoud ditéctor, que solo existe en algunos navegadores, instala el pólifil. Tu mismo código funcionará en fáirfox, safari, y hasta en nóud."
+  },
+  {
+    "slide": 15,
+    "sub": "Y si tu proyecto usa Quagga2, la migración es cambiar una sola línea: el import. Los callbacks, las cajas y el dibujo sobre el canvas se mantienen; lo que ya no aplica te avisa una sola vez.",
+    "tts": "Y si tu proyecto usa cuága dos, la migración es cambiar una sola línea: el import. Los callbacks, las cajas, y el dibujo sobre el canvas se mantienen; lo que ya no aplica, te avisa una sola vez."
+  },
+  {
+    "slide": 16,
+    "sub": "Leer el código es la mitad del trabajo; la otra es entenderlo. Los parsers interpretan GS1, con lote y fecha de caducidad, el contenido de los QR como wifi o tarjetas de contacto, las licencias de conducir AAMVA y los sobres ISO 15434.",
+    "tts": "Leer el código es la mitad del trabajo; la otra es entenderlo. Los parsers interpretan ge ese uno, con lote y fecha de caducidad; el contenido de los cu erre, como wifi o tarjetas de contacto; las licencias de conducir americanas; y los sobres i ese o quince cuatro treinta y cuatro."
+  },
+  {
+    "slide": 17,
+    "sub": "La cuarta parte: cómo desplegarlo en tu proyecto.",
+    "tts": "La cuarta parte: cómo desplegarlo en tu proyecto."
+  },
+  {
+    "slide": 18,
+    "sub": "Con Vite solo excluyes el paquete del pre-empaquetado; si lo olvidas, el error te lo dice. Con webpack no hace falta nada. También puedes servir el motor desde tu propio dominio o un CDN, y funciona bajo una política de seguridad de contenido estricta.",
+    "tts": "Con vit, solo excluyes el paquete del pre empaquetado; si lo olvidas, el error te lo dice. Con uébpak no hace falta nada. También puedes servir el motor desde tu propio dominio o un ce de ene, y funciona bajo una política de seguridad de contenido estricta."
+  },
+  {
+    "slide": 19,
+    "sub": "Cuando algo falla, sabes exactamente qué: permiso denegado, sin cámara, contexto inseguro o fallo al cargar el motor. Y getEnvironmentReport te da un informe del navegador para adjuntar a un reporte, sin datos personales.",
+    "tts": "Cuando algo falla, sabes exactamente qué: permiso denegado, sin cámara, contexto inseguro, o fallo al cargar el motor. Y la función de diagnóstico te da un informe del navegador para adjuntar a un reporte, sin datos personales."
+  },
+  {
+    "slide": 20,
+    "sub": "Y la quinta: el detector con inteligencia artificial, todavía experimental. Una red pequeña localiza los códigos que el motor clásico no encuentra; el motor los endereza y los lee. Como la red no decodifica, no puede inventar lecturas.",
+    "tts": "Y la quinta: el detector con inteligencia artificial, todavía experimental. Una red pequeña localiza los códigos que el motor clásico no encuentra; el motor los endereza, y los lee. Como la red no decodifica, no puede inventar lecturas."
+  },
+  {
+    "slide": 21,
+    "sub": "¿Y los resultados? En 1 840 fotos reales de móvil, qhago lee el 77 %, frente al 71 % de zxing-wasm y el 43 % de Quagga2. Con el detector IA sube al 84 %, sin más lecturas falsas.",
+    "tts": "¿Y los resultados? En mil ochocientas cuarenta fotos reales de móvil, jago lee el setenta y siete por ciento, frente al setenta y uno de zeta-ksing uasm, y el cuarenta y tres de cuága dos. Con el detector de inteligencia artificial, sube al ochenta y cuatro por ciento, sin más lecturas falsas."
+  },
+  {
+    "slide": 22,
+    "sub": "Y es ligero: si solo usas decode, tu aplicación crece menos de nueve kilobytes, más el motor. Está probado en tres motores de navegador, en Node y en Bun, con fuzzing y una cobertura del 88 %.",
+    "tts": "Y es ligero: si solo usas dicóud, tu aplicación crece menos de nueve kilobytes, más el motor. Está probado en tres motores de navegador, en nóud y en ban, con fuzzing, y una cobertura del ochenta y ocho por ciento."
+  },
+  {
+    "slide": 23,
+    "live": true,
+    "sub": "Veámoslo en acción. Arrastro una imagen y la lectura aparece en milisegundos. Ahora abro la cámara: el componente detecta el código en movimiento y lo resalta en verde.",
+    "tts": "Veámoslo en acción. Arrastro una imagen, y la lectura aparece en milisegundos. Ahora abro la cámara: el componente detecta el código en movimiento, y lo resalta en verde."
+  },
+  {
+    "slide": 24,
+    "sub": "En resumen: decode para fotos y archivos, createScanner para control total, la etiqueta qhago-scanner para empezar en tres líneas, el polyfill para código estándar, y la capa de compatibilidad si vienes de Quagga. Gracias por ver.",
+    "tts": "En resumen: dicóud para fotos y archivos; criéit escáner para control total; la etiqueta jago escáner para empezar en tres líneas; el pólifil para código estándar; y la capa de compatibilidad si vienes de cuága. Gracias por ver."
+  }
+]

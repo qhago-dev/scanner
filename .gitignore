@@ -61,3 +61,4 @@ packages/scanner/e2e/vite-app/fixture.png
 packages/scanner/e2e/vite-app/.vite-*/
 packages/scanner/test/**/__screenshots__/
 bench/dataset/public/raw/
+apps/demo/video/out/

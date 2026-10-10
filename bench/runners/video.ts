@@ -22,6 +22,8 @@ const { values: a } = parseArgs({
     split: { type: "string", default: "dev" },
     engines: { type: "string", default: "qhago,zxing-wasm,zxing-js" },
     reason: { type: "string" },
+    // Multiplica el tiempo de proceso medido (simula un equipo más lento; un Android de gama media ≈ 8-10).
+    slowdown: { type: "string", default: "1" },
     out: { type: "string", default: join(import.meta.dir, "../results") },
   },
 });
@@ -29,6 +31,7 @@ if (a.split === "test" && !a.reason) {
   console.error("--split test exige --reason");
   process.exit(2);
 }
+const SLOW = Number(a.slowdown);
 configure({
   wasmUrl: new URL("../../packages/scanner/wasm/qhago_engine_node.wasm", import.meta.url),
 });
@@ -90,7 +93,7 @@ async function runQhago(s: Sample): Promise<VideoRun> {
       { ts: t, srcWidth: v.w, srcHeight: v.h },
     );
     processed++;
-    busyUntil = t + r.ms;
+    busyUntil = t + r.ms * SLOW;
     // Los detect emitidos durante process() se fechan cuando termina ese frame.
     for (const p of pending.splice(0)) reads.push({ ...p, atMs: busyUntil });
   }
@@ -117,7 +120,7 @@ async function runFrameByFrame(e: Engine, s: Sample): Promise<VideoRun> {
     }
     const t0 = performance.now();
     const det = await e.decode({ rgba: { data: rgba, width: v.w, height: v.h } });
-    const ms = performance.now() - t0;
+    const ms = (performance.now() - t0) * SLOW;
     processed++;
     busyUntil = t + ms;
     for (const d of det)
@@ -163,6 +166,7 @@ const L = [
   "Tiempo real simulado: frames a su FPS, descartados si el motor está ocupado. ttfr = desde `firstVisibleMs` hasta la primera lectura correcta emitida.",
   "",
 ];
+if (SLOW !== 1) L.push(`Tiempo de proceso ×${SLOW} (equipo lento simulado).`, "");
 if (a.dataset !== "real")
   L.push("> **No representativo de cámaras reales**: no sirve para G3.", "");
 L.push(
@@ -210,4 +214,22 @@ const file = join(
   `${new Date().toISOString().slice(0, 10)}-${commit}-${a.dataset}-${a.split}.md`,
 );
 writeFileSync(file, md);
+// Detalle por vídeo (para comparar cambios vídeo a vídeo).
+const detail = Object.fromEntries(
+  [...results].map(([name, runs]) => [
+    name,
+    runs.map((r) => {
+      const exp = r.sample.codes[0];
+      const ok = r.reads.find((x) => exp && equivalent(exp, x));
+      return {
+        id: r.sample.id,
+        read: !!ok,
+        ttfrMs: ok && exp ? Math.max(0, ok.atMs - (exp.firstVisibleMs ?? 0)) : null,
+        processed: r.processed,
+        dropped: r.dropped,
+      };
+    }),
+  ]),
+);
+writeFileSync(file.replace(/\.md$/, ".json"), `${JSON.stringify(detail, null, 1)}\n`);
 console.log(md);

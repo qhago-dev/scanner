@@ -9,10 +9,12 @@ import {
   readProposals,
   type ScannerPlugin,
 } from "../plugins";
-import type { BarcodeResult, Point, Rect } from "../types";
+import type { AdvancedDecodeOptions, BarcodeResult, Point, Rect } from "../types";
 import { contentKey, Fusion } from "./fusion";
 import { type Observation, type Track, Tracker } from "./tracker";
 import type { ScannerEvent, ScannerWorkerOptions, TrackedResult } from "./types";
+
+type AdvancedOptions = Partial<AdvancedDecodeOptions>;
 
 /** Eventos que cruzan del worker al hilo principal (ScanError se serializa aparte). */
 export type WireEvent =
@@ -33,6 +35,24 @@ const SWEEP_ZONES: Rect[] = [
   { x: 0, y: 0.4, width: 0.6, height: 0.6 },
   { x: 0.4, y: 0.4, width: 0.6, height: 0.6 },
 ];
+/**
+ * El barrido "thorough" completo de una zona cuesta ~25-50× un frame "fast" (~650 ms en un Android de
+ * gama media) y bloquea el motor justo cuando el código entra en cuadro. Se reparte en rebanadas: cada
+ * frame vacío ejecuta una sola (zona × preproceso), dando más turnos al preproceso barato y
+ * más útil. Mismo trabajo total, sin fotogramas de 650 ms.
+ */
+const SWEEP_SLICES: AdvancedOptions[] = [
+  { preprocess: { clahe: true } }, // fast + harder + inverted + CLAHE: baratas y las que más rescatan
+  { preprocess: { unsharp: true, crops: true }, tryInvert: false },
+  { preprocess: { multiscale: true }, tryInvert: false }, // x2 / x0.5: la cara (~80 % del coste)
+];
+/** Orden de rebanadas: la barata en la mitad de los frames. 4 y 5 zonas son coprimos → 20 frames cubren todo. */
+const SWEEP_PATTERN = [0, 1, 0, 2] as const;
+/**
+ * Fracción máxima del tiempo de pared para el barrido: tras una rebanada de c ms se espera
+ * c·(1/SWEEP_DUTY − 1) ms antes de la siguiente (solo frena las rebanadas caras en equipos lentos).
+ */
+export const SWEEP_DUTY = 0.5;
 
 function scalePoint(p: Point, sx: number, sy: number): Point {
   return { x: p.x * sx, y: p.y * sy };
@@ -43,6 +63,8 @@ export class ScannerSession {
   private fusion: Fusion;
   private emptyFrames = 0;
   private sweepIndex = 0;
+  /** Momento (ts del frame) a partir del cual se permite el siguiente barrido. */
+  private nextSweepAt = -Infinity;
   private reported = new Set<number>();
   private framesWithoutRead = 0;
   private plugins: Promise<ScannerPlugin[]> | null = null;
@@ -86,6 +108,7 @@ export class ScannerSession {
     this.fusion.reset();
     this.reported.clear();
     this.emptyFrames = 0;
+    this.nextSweepAt = -Infinity;
   }
 
   async process(input: ImageInput, meta: FrameMeta): Promise<{ ms: number; passes: string[] }> {
@@ -111,8 +134,8 @@ export class ScannerSession {
       returnErrors: true,
     };
     const passes: string[] = [];
-    const read = (region: Rect, strategy = this.opts.strategy) => {
-      const r = readRaster(engine, raster, { ...base, strategy, region });
+    const read = (region: Rect, strategy = this.opts.strategy, advanced?: AdvancedOptions) => {
+      const r = readRaster(engine, raster, { ...base, strategy, region, advanced });
       passes.push(
         ...r.passes.map((p) => (strategy === this.opts.strategy ? p : `${strategy}:${p}`)),
       );
@@ -159,10 +182,14 @@ export class ScannerSession {
     // Barrido rotativo cuando no hay nada (ni lecturas ni símbolos sin leer).
     const nothing = frame.results.length === 0 && frame.candidates.length === 0;
     this.emptyFrames = nothing ? this.emptyFrames + 1 : 0;
-    if (nothing && this.emptyFrames >= this.opts.escalateAfterFrames) {
-      const zone = SWEEP_ZONES[this.sweepIndex++ % SWEEP_ZONES.length] as Rect;
+    if (nothing && this.emptyFrames >= this.opts.escalateAfterFrames && now >= this.nextSweepAt) {
+      const i = this.sweepIndex++;
+      const zone = SWEEP_ZONES[i % SWEEP_ZONES.length] as Rect;
+      const slice = SWEEP_SLICES[SWEEP_PATTERN[i % SWEEP_PATTERN.length] as number];
       const region = this.intersect(this.toPx(zone, raster), roi);
-      const r = region && this.safeRead(read, region, "thorough");
+      const ts0 = performance.now();
+      const r = region && this.safeRead(read, region, "thorough", slice);
+      this.nextSweepAt = now + (performance.now() - ts0) * (1 / SWEEP_DUTY - 1);
       if (r?.results.length) {
         this.trackAndVote(r.results, now, sx, sy);
         readAny = true;
@@ -252,9 +279,14 @@ export class ScannerSession {
     this.emit({ type: d.kind === "duplicate" ? "track" : d.kind, result });
   }
 
-  private safeRead<T>(read: (r: Rect, s: "thorough") => T, region: Rect, s: "thorough"): T | null {
+  private safeRead<T>(
+    read: (r: Rect, s: "thorough", a?: AdvancedOptions) => T,
+    region: Rect,
+    s: "thorough",
+    advanced?: AdvancedOptions,
+  ): T | null {
     try {
-      return read(region, s);
+      return read(region, s, advanced);
     } catch {
       return null;
     }

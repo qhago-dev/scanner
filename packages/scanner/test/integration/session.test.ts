@@ -77,6 +77,21 @@ describe("ScannerSession", () => {
     expect(passes.some((p) => p.startsWith("thorough:"))).toBe(true);
   });
 
+  it("barrido en rebanadas: ningún frame ejecuta el thorough completo; en 20 frames se recorre todo", async () => {
+    const { step } = run();
+    const seen = new Set<string>();
+    for (let i = 0; i < 24; i++) {
+      const p = (await step(frame(-1, 0), 1000)).passes;
+      for (const x of p) seen.add(x);
+      const pre = p.filter((x) => /^thorough:(clahe|unsharp|x2|x0\.5)$/.test(x));
+      // Una rebanada como mucho: CLAHE, o unsharp (+ recortes), o multiescala; nunca todas juntas.
+      expect(pre.length, p.join(",")).toBeLessThanOrEqual(2);
+      expect(p.includes("thorough:clahe") && p.includes("thorough:x2")).toBe(false);
+    }
+    for (const x of ["thorough:clahe", "thorough:unsharp", "thorough:crop", "thorough:x2"])
+      expect(seen.has(x), x).toBe(true);
+  });
+
   it("ROI: un código fuera de la ROI no se lee", async () => {
     const { events, step } = run({
       roi: { x: 0.6, y: 0.6, width: 0.4, height: 0.4 },

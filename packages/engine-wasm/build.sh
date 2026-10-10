@@ -76,6 +76,10 @@ link_target() {
   if grep -qE '^\s*await |[;}]\s*await import\(' "$dest/$base.mjs"; then
     die "$name: el glue contiene top-level await"
   fi
+  # CSP estricta (F6.6): sin eval ni new Function (DYNAMIC_EXECUTION=0 debe garantizarlo).
+  if grep -qE '\beval\(|new Function\(' "$dest/$base.mjs"; then
+    die "$name: el glue usa eval/new Function (rompe CSP sin 'unsafe-eval')"
+  fi
   local raw gz
   raw=$(wc -c < "$dest/$base.wasm"); gz=$(gzip -9 -c "$dest/$base.wasm" | wc -c)
   log "$name: wasm $((raw / 1024)) KB raw, $((gz / 1024)) KB gzip"

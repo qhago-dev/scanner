@@ -36,3 +36,23 @@ jobs:
         with:
           name: bench-results
           path: bench/results/nightly
+
+  fuzz:
+    # F6.5: libFuzzer + ASan/UBSan sobre la ABI del motor, 1 h.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: sudo apt-get install -y clang
+      - uses: actions/cache@v4
+        with:
+          path: packages/engine-wasm/build/fuzz/corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - run: bash packages/engine-wasm/fuzz/run.sh 3600
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-artifacts
+          path: packages/engine-wasm/build/fuzz/artifacts

@@ -8,6 +8,8 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.d.ts"],
       reporter: ["text-summary", "json-summary"],
+      // F6.1: medido sobre node + browser (Chromium) + camera; los workers se cubren vía puerto falso.
+      thresholds: { lines: 80, statements: 80, functions: 80, branches: 70 },
     },
     projects: [
       {

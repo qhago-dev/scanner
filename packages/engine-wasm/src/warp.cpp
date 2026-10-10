@@ -24,6 +24,7 @@ Homography RectToQuad(const float q[8], int W, int H) {
   } else {
     const double dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
     const double den = dx1 * dy2 - dx2 * dy1;
+    if (std::fabs(den) < 1e-12) return Homography{{0, 0, NAN, 0, 0, NAN, 0, 0, 1}};  // degenerado → todo fuera
     g = (sx * dy2 - dx2 * sy) / den;
     h = (dx1 * sy - sx * dy1) / den;
     a = x1 - x0 + g * x1; b = x3 - x0 + h * x3; c = x0;
@@ -48,6 +49,11 @@ void WarpQuad(const uint8_t* src, int w, int h, int stride, int channels, const 
       hm.Apply(u + 0.5, v + 0.5, sx, sy);
       sx -= 0.5f;
       sy -= 0.5f;
+      // Homografía degenerada o puntos muy lejos (también NaN): fuera de la imagen (hallazgo del fuzzer F6.5).
+      if (!(sx > -2.f && sy > -2.f && sx < w + 1.f && sy < h + 1.f)) {
+        dst[static_cast<std::size_t>(v) * W + u] = 255;
+        continue;
+      }
       const int ix = static_cast<int>(std::floor(sx)), iy = static_cast<int>(std::floor(sy));
       const float fx = sx - ix, fy = sy - iy;
       const float top = px(ix, iy) * (1 - fx) + px(ix + 1, iy) * fx;

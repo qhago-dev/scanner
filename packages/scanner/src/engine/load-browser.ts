@@ -8,7 +8,8 @@ let modulePromise: Promise<WebAssembly.Module> | null = null;
 let enginePromise: Promise<Engine> | null = null;
 
 function hint(url: string): string {
-  if (url.includes("/.vite/deps/")) {
+  // Vite dev con pre-bundling sirve el paquete desde <cacheDir>/deps/ (por defecto node_modules/.vite/deps/).
+  if (/\/deps\/[^/]+$/.test(url.split("?")[0] ?? "")) {
     return ' Parece Vite en modo dev: añade optimizeDeps: { exclude: ["@qhago/scanner"] } a vite.config.';
   }
   return " Revisa que el .wasm se sirva desde esa URL (y con CORS si es de otro origen).";

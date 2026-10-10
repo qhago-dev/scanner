@@ -26,6 +26,9 @@ double NowMs() {
 
 // Formatos que se piden a ZXing por cada uno de los nuestros.
 std::vector<BarcodeFormat> RequestedFormats(uint32_t mask) {
+  // Solo los 13 formatos de 1.0: una máscara vacía en ZXing significa "Any" (activaría lectores fuera de
+  // alcance, p. ej. MicroPDF417; hallazgo del fuzzer F6.5).
+  mask &= (1u << kFormatCount) - 1;
   if (mask == 0) mask = (1u << kFormatCount) - 1;
   std::vector<BarcodeFormat> f;
   auto on = [&](Format x) { return (mask >> x) & 1u; };
@@ -38,7 +41,10 @@ std::vector<BarcodeFormat> RequestedFormats(uint32_t mask) {
   if (on(kEan8)) f.push_back(BarcodeFormat::EAN8);
   if (on(kEan13)) f.push_back(BarcodeFormat::EAN13);
   if (on(kItf)) f.push_back(BarcodeFormat::ITF);
-  if (on(kPdf417)) f.push_back(BarcodeFormat::PDF417);
+  // CompactPDF417 (y no PDF417) activa el lector PDF417 sin MicroPDF417, que no está entre los 13 formatos y cuyas
+  // lecturas se descartaban; evita además UB upstream en esa ruta (fuzz/README.md). ZXing no filtra resultados
+  // por formato pedido, así que PDF417 y Compact se siguen leyendo igual.
+  if (on(kPdf417)) f.push_back(BarcodeFormat::CompactPDF417);
   if (on(kQrCode)) {
     f.push_back(BarcodeFormat::QRCodeModel1);
     f.push_back(BarcodeFormat::QRCodeModel2);

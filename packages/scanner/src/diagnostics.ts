@@ -42,6 +42,12 @@ function moduleWorkers(): boolean {
   return ok;
 }
 
+/** Cada sonda asíncrona tiene 2 s: un informe de diagnóstico nunca debe colgarse (p. ej. permisos en Firefox). */
+function probe<T>(p: Promise<T> | undefined, fallback: T, ms = 2000): Promise<T> {
+  if (!p) return Promise.resolve(fallback);
+  return Promise.race([p.catch(() => fallback), new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+}
+
 function runtime(): EnvironmentReport["runtime"] {
   const g = globalThis as Record<string, unknown>;
   if (typeof g.Bun !== "undefined") return "bun";
@@ -81,14 +87,14 @@ export async function getEnvironmentReport(): Promise<EnvironmentReport> {
     | { getSupportedFormats?: () => Promise<string[]>; __qhagoPolyfill?: boolean }
     | undefined;
   if (BD?.getSupportedFormats && !BD.__qhagoPolyfill)
-    nativeFormats = await BD.getSupportedFormats().catch(() => []);
+    nativeFormats = await probe(BD.getSupportedFormats(), []);
   let camera: EnvironmentReport["camera"];
   if (nav?.mediaDevices?.enumerateDevices) {
-    const permission = await nav.permissions
-      ?.query({ name: "camera" as PermissionName })
-      .then((p) => p.state as string)
-      .catch(() => "unknown");
-    const devices = (await nav.mediaDevices.enumerateDevices().catch(() => [])).filter(
+    const permission = await probe(
+      nav.permissions?.query({ name: "camera" as PermissionName }).then((p) => p.state as string),
+      "unknown",
+    );
+    const devices = (await probe(nav.mediaDevices.enumerateDevices(), [])).filter(
       (d) => d.kind === "videoinput",
     ).length;
     camera = { permission: permission ?? "unknown", devices };

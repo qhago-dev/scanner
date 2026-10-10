@@ -56,3 +56,7 @@ bench/dataset/zxing/
 packages/scanner/test/.cache/
 training/data/synth/
 training/runs/
+training/.pydeps/
+packages/scanner/e2e/vite-app/fixture.png
+packages/scanner/e2e/vite-app/.vite-*/
+packages/scanner/test/**/__screenshots__/

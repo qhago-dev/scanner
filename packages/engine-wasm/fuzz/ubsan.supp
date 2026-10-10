@@ -1,0 +1,5 @@
+# Hallazgos upstream conocidos (no en nuestro código). Ver fuzz/README.md.
+# ZXing-C++ 3.1.1 convierte NaN a int en varias rutas (Pattern.h:329, pdf417/MicroPDFReader.cpp:537,
+# LocalGrid.cpp:52, …). En el build WASM es inocuo: nontrapping-fptoint satura a 0 (no hay trap).
+# Solo esta clase y solo en el código vendorizado: src/ (nuestro) sigue con UBSan estricto.
+float-cast-overflow:*/vendor/zxing-cpp/*

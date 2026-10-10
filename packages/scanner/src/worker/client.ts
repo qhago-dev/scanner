@@ -48,6 +48,21 @@ export function createModuleWorker(url: string | URL): Worker {
   return new Worker(boot, { type: "module" });
 }
 
+const WORKER_HINT =
+  "Si hay CSP, permite worker-src 'self' blob: (y el origen del CDN si el paquete viene de otro origen); " +
+  "o configura workerUrl, o usa worker: false.";
+
+/** Tiempo máximo hasta "ready" (descarga del worker + instanciación del motor). */
+const READY_TIMEOUT_MS = 20_000;
+
+function workerError(detail: string, cause?: unknown): ScanError {
+  return new ScanError(
+    "ENGINE_LOAD_FAILED",
+    `No se pudo iniciar el worker: ${detail}. ${WORKER_HINT}`,
+    { cause },
+  );
+}
+
 /** Crea un worker (workerFactory, workerUrl o el interno), le pasa el módulo WASM compilado y espera "ready". */
 export async function createReadyWorker(
   onMessage?: (m: FromWorker) => void,
@@ -55,26 +70,52 @@ export async function createReadyWorker(
 ): Promise<Worker> {
   const cfg = getConfig();
   const make = factory ?? cfg.workerFactory;
-  const w = make
-    ? make()
-    : createModuleWorker(cfg.workerUrl ?? new URL("./worker.js", import.meta.url));
+  let w: Worker;
+  try {
+    w = make
+      ? make()
+      : createModuleWorker(cfg.workerUrl ?? new URL("./worker.js", import.meta.url));
+  } catch (e) {
+    throw workerError(String((e as Error)?.message ?? e), e);
+  }
   const mod = await loadModule();
   await new Promise<void>((resolve, reject) => {
-    const onError = (ev: ErrorEvent) => {
-      w.terminate();
-      reject(
-        new ScanError(
-          "ENGINE_LOAD_FAILED",
-          `No se pudo iniciar el worker: ${ev.message || "error de carga"}. Si hay CSP, permite worker-src 'self' blob:; ` +
-            "si el paquete viene de un CDN, configura workerUrl o usa worker: false.",
-        ),
-      );
+    // Un worker bloqueado por CSP no siempre dispara "error" (Chromium): se escucha la violación y hay timeout.
+    const doc = typeof document !== "undefined" ? document : null;
+    const cleanup = () => {
+      clearTimeout(timer);
+      w.removeEventListener("error", onError);
+      doc?.removeEventListener("securitypolicyviolation", onCsp);
     };
+    const fail = (err: ScanError) => {
+      cleanup();
+      w.terminate();
+      reject(err);
+    };
+    const onError = (ev: ErrorEvent) => fail(workerError(ev.message || "error de carga"));
+    const onCsp = (ev: SecurityPolicyViolationEvent) => {
+      const dir = ev.effectiveDirective || ev.violatedDirective;
+      // Solo violaciones del propio worker (no imágenes, estilos u otros scripts de la página).
+      const ours =
+        /^worker-src/.test(dir) ||
+        (/^(script|child|default)-src/.test(dir) && /^blob:|worker/.test(ev.blockedURI));
+      if (ours)
+        fail(
+          workerError(
+            `bloqueado por CSP (${ev.effectiveDirective || ev.violatedDirective} → ${ev.blockedURI})`,
+          ),
+        );
+    };
+    const timer = setTimeout(
+      () => fail(workerError(`sin respuesta en ${READY_TIMEOUT_MS / 1000} s`)),
+      READY_TIMEOUT_MS,
+    );
     w.addEventListener("error", onError, { once: true });
+    doc?.addEventListener("securitypolicyviolation", onCsp);
     w.onmessage = (e: MessageEvent<FromWorker>) => {
       if (e.data.t === "ready") {
         workerPlugins.set(w, e.data.plugins ?? []);
-        w.removeEventListener("error", onError);
+        cleanup();
         resolve();
       } else {
         onMessage?.(e.data);

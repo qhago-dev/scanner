@@ -10,6 +10,7 @@
 #include "cascade.h"
 #include "warp.h"
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <exception>
@@ -191,6 +192,8 @@ int32_t sa_read_quad(const uint8_t* src, int32_t w, int32_t h, int32_t stride, i
   if (!src || w <= 0 || h <= 0 || (channels != 1 && channels != 4) || stride < w * channels || dstW <= 0 ||
       dstH <= 0 || static_cast<int64_t>(dstW) * dstH > 16'000'000)
     return Fail("invalid quad read");
+  for (float v : g_quad)
+    if (!std::isfinite(v)) return Fail("invalid quad read");
   const qhago::Homography hm = qhago::RectToQuad(g_quad, dstW, dstH);
   g_warp.resize(static_cast<size_t>(dstW) * dstH);
   qhago::WarpQuad(src, w, h, stride, channels, hm, g_warp.data(), dstW, dstH);

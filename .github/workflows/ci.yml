@@ -58,7 +58,70 @@ jobs:
       - run: cd packages/scanner && bun scripts/api-report.ts --check
       - run: bun run test
       - run: bunx playwright install --with-deps chromium firefox webkit
-      - run: bun run --filter @qhago/scanner test:browser
+      - run: sudo apt-get install -y ffmpeg   # clip y4m de la cámara simulada
+      # F6.1: node + browser (Chromium) + camera con umbral de cobertura (vitest.config.ts).
+      - run: cd packages/scanner && bun run coverage
+      - run: cd packages/scanner && QHAGO_BROWSERS=firefox,webkit bunx vitest run --project browser
+      - run: bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build
+      # F6.4: presupuestos de tamaño por entry y escenarios con tree-shaking.
+      - run: cd packages/scanner && bun run size
+      # F6.3/F6.6: dist servido desde otro origen (CDN con CORS) bajo CSP estricta.
+      - run: cd packages/scanner && bun run test:e2e
+      - run: cd packages/ai && bunx vitest run
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: packages/scanner/coverage/coverage-summary.json
+
+  runtimes:
+    # F6.2: integración en Node 22 y 24 (Bun ya corre en check).
+    needs: wasm
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["22.14", "24"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-wasm
+          path: packages/engine-wasm/out
+      - run: pip install pillow && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
+      - run: bun install --frozen-lockfile && node packages/scanner/scripts/copy-wasm.mjs
+      - run: cd packages/scanner && npx vitest run --project node
+
+  micro:
+    # F6.4: micro-benchmarks contra la línea base guardada desde main.
+    needs: wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-wasm
+          path: packages/engine-wasm/out
+      - run: bun install --frozen-lockfile && bun run --filter @qhago/scanner build
+      - uses: actions/cache/restore@v4
+        with:
+          path: micro-base.json
+          key: micro-main-
+          restore-keys: micro-main-
+      - run: cd bench && bun run micro.ts $([ -f ../micro-base.json ] && echo --compare ../micro-base.json) --save ../micro-now.json
+      - if: github.ref == 'refs/heads/main'
+        run: mv micro-now.json micro-base.json
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: micro-base.json
+          key: micro-main-${{ github.sha }}
 
   parity:
     # Paridad WASM ↔ ZXing nativo sobre todos los samples × 4 rotaciones × 3 estrategias (gate G2).
@@ -79,4 +142,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bunx license-checker --production --excludePrivatePackages --failOn 'GPL;AGPL;LGPL;SSPL;BUSL'
+      # F6.6: licencias + bun audit del cierre publicado (scanner, ai); lo de desarrollo solo avisa.
+      - run: node scripts/check-deps.mjs

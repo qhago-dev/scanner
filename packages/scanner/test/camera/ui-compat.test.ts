@@ -1,4 +1,5 @@
 // <qhago-scanner> y quagga-compat con la cámara simulada (EAN-13 en movimiento).
+import axe from "axe-core";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { Quagga, type QuaggaJSResultObject } from "../../src/quagga-compat/index";
 import type { TrackedResult } from "../../src/scanner/types";
@@ -45,6 +46,23 @@ describe("<qhago-scanner>", () => {
     expect(px.some((v, i) => i % 4 === 3 && v > 0)).toBe(true);
     el.remove();
     expect(el.scanner).toBeNull();
+  });
+
+  it("axe-core: sin violaciones de accesibilidad (shadow DOM incluido)", async () => {
+    document.documentElement.lang = "es";
+    document.title = "test";
+    const el = document.createElement("qhago-scanner");
+    el.setAttribute("torch-button", "");
+    el.setAttribute("switch-camera-button", "");
+    el.setAttribute("formats", "ean_13");
+    const got = new Promise((r) => el.addEventListener("detect", r, { once: true }));
+    document.body.append(el);
+    await got;
+    // Contexto = el componente (las reglas de página, como landmark-one-main, no aplican a un widget).
+    const res = await axe.run(el, { runOnly: ["wcag2a", "wcag2aa", "best-practice"] });
+    expect(
+      res.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`),
+    ).toEqual([]);
   });
 
   it("paused no arranca la cámara hasta quitar el atributo", async () => {

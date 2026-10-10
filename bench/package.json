@@ -5,13 +5,15 @@
   "scripts": {
     "bench": "bun run cli.ts",
     "typecheck": "tsc --noEmit -p .",
-    "test": "bun test metrics.test.ts"
+    "test": "bun test metrics.test.ts",
+    "micro": "bun run micro.ts"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.8.4",
     "@qhago/scanner": "workspace:*",
     "@zxing/library": "^0.21.3",
     "jpeg-js": "^0.4.4",
+    "onnxruntime-web": "^1.30.0",
     "pngjs": "^7.0.0",
     "zxing-wasm": "^3.1.5"
   },

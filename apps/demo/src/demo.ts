@@ -1,19 +1,64 @@
-import { createScanner, decode, FORMATS, type Scanner, type TrackedResult } from "@qhago/scanner";
+import {
+  createScanner,
+  decode,
+  FORMATS,
+  type Scanner,
+  type ScannerOptions,
+  type TrackedResult,
+} from "@qhago/scanner";
+import { applyFocus, trackOf } from "./camopts";
+import { dlog, mountDebug } from "./debug";
+import "./scan-ui.css";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
 const overlay = $<HTMLCanvasElement>("overlay");
 let scanner: Scanner | null = null;
 const live = new Map<number, { r: TrackedResult; at: number }>();
+const laser = $<HTMLElement>("laser");
+const focusSel = $<HTMLSelectElement>("focus");
+const setFocus = async () => {
+  const msg = await applyFocus(trackOf(video), focusSel.value, $("dist"), $("dist-wrap"));
+  if (msg) $("stats").textContent = msg;
+};
+const dbg = mountDebug($("dbg"), {
+  video: () => (scanner ? video : null),
+  info: () => ({
+    ai: $<HTMLSelectElement>("ai").value,
+    focus: focusSel.value,
+    roi: $<HTMLInputElement>("use-roi").checked,
+    settings: trackOf(video)?.getSettings(),
+  }),
+  flash: () => document.querySelector<HTMLElement>(".stage"),
+});
+let lastFrameLog = 0;
 
-function build(): Scanner {
+async function build(): Promise<Scanner> {
+  const ai = $<HTMLSelectElement>("ai").value;
+  const [w, h] = $<HTMLSelectElement>("res").value.split("x").map(Number) as [number, number];
+  let extra: Partial<ScannerOptions> = {};
+  if (ai !== "off") {
+    $("stats").textContent = "cargando IA…";
+    const { aiDetector, aiWorker } = await import("@qhago/ai");
+    extra = {
+      workerFactory: aiWorker,
+      plugins: [aiDetector({ when: ai as "fallback" | "always" })],
+    };
+  }
+  dlog("open", {
+    ai,
+    resolution: [w, h],
+    focus: focusSel.value,
+    roi: $<HTMLInputElement>("use-roi").checked,
+  });
   const s = createScanner({
+    ...extra,
     video,
     formats: $<HTMLInputElement>("all-formats").checked ? FORMATS : undefined,
     roi: $<HTMLInputElement>("use-roi").checked
       ? { x: 0.1, y: 0.3, width: 0.8, height: 0.4 }
       : "full",
-    camera: { deviceId: $<HTMLSelectElement>("camera").value || undefined },
+    camera: { deviceId: $<HTMLSelectElement>("camera").value || undefined, resolution: [w, h] },
     frameStats: true,
   });
   s.on("detect", ({ result }) => {
@@ -22,18 +67,42 @@ function build(): Scanner {
     li.textContent = `${result.format} · ${result.text} · track ${result.trackId} · ${result.votes} voto(s)`;
     $("results").prepend(li);
     navigator.vibrate?.(40);
+    dlog("detect", { format: result.format, text: result.text, votes: result.votes });
+    dbg.noteDetect(result);
+    laser.classList.add("hit");
+    setTimeout(() => laser.classList.remove("hit"), 400);
   });
-  s.on("candidate", ({ result }) => live.set(result.trackId, { r: result, at: performance.now() }));
+  s.on("candidate", ({ result }) => {
+    live.set(result.trackId, { r: result, at: performance.now() });
+    dlog("candidate", { format: result.format, text: result.text });
+  });
   s.on("track", ({ result }) => live.set(result.trackId, { r: result, at: performance.now() }));
   s.on("lost", ({ trackId }) => live.delete(trackId));
   s.on("frame", (e) => {
+    const now = performance.now();
+    if (now - lastFrameLog > 1000) {
+      lastFrameLog = now;
+      dlog("frame", {
+        route: s.route,
+        fps: e.fps,
+        ms: e.ms,
+        passes: e.passes,
+        settings: trackOf(video)?.getSettings(),
+      });
+    }
+    const st = trackOf(video)?.getSettings() as
+      | (MediaTrackSettings & { focusMode?: string })
+      | undefined;
     $("stats").textContent =
-      `${s.route} · ${e.fps.toFixed(1)} fps · ${e.ms.toFixed(1)} ms/frame · ${e.passes.join(",")}`;
+      `${st ? `${st.width}×${st.height} · enfoque ${st.focusMode ?? "?"} · ` : ""}${s.route} · ${e.fps.toFixed(1)} fps · ${e.ms.toFixed(1)} ms/frame · ${e.passes.join(",")}`;
   });
   s.on("error", ({ error }) => {
     $("stats").textContent = `Error ${error.code}: ${error.message}`;
+    dlog("scanner-error", { code: error.code, message: error.message });
   });
   s.on("state", ({ state }) => {
+    dlog("state", { state });
+    laser.hidden = state !== "scanning" || !$<HTMLInputElement>("use-laser").checked;
     $<HTMLButtonElement>("pause").disabled = state !== "scanning" && state !== "paused";
     $<HTMLButtonElement>("stop").disabled = state !== "scanning" && state !== "paused";
     $("pause").textContent = state === "paused" ? "▶ Reanudar" : "⏸ Pausa";
@@ -76,9 +145,10 @@ requestAnimationFrame(draw);
 
 $("start").onclick = async () => {
   scanner?.destroy();
-  scanner = build();
+  scanner = await build();
   $("roi").hidden = !$<HTMLInputElement>("use-roi").checked;
   await scanner.start();
+  await setFocus();
   const cams = await scanner.listCameras();
   const sel = $<HTMLSelectElement>("camera");
   const current = (video.srcObject as MediaStream | null)
@@ -123,4 +193,10 @@ $<HTMLInputElement>("file").onchange = async (e) => {
     null,
     2,
   )}`;
+};
+
+focusSel.onchange = () => void setFocus();
+$<HTMLInputElement>("dist").oninput = () => void setFocus();
+$<HTMLInputElement>("use-laser").onchange = (e) => {
+  laser.hidden = !(e.target as HTMLInputElement).checked || scanner?.state !== "scanning";
 };

@@ -1,0 +1,98 @@
+/* Línea láser (guía donde se espera el código) y panel de depuración, compartidos por las demos. */
+.laser {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.laser[hidden] {
+  display: none;
+}
+/* Haz de luz: banda roja difusa, como si el lector iluminara el objeto. */
+.laser::before {
+  content: "";
+  position: absolute;
+  left: -4%;
+  right: -4%;
+  top: -36px;
+  height: 72px;
+  background: radial-gradient(ellipse at center, #ff20204a 0%, #ff20201f 40%, transparent 72%);
+  mix-blend-mode: screen;
+}
+/* Línea: núcleo brillante con halo y extremos que se desvanecen. */
+.laser::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #ff3030d9 12%,
+    #ff6060 50%,
+    #ff3030d9 88%,
+    transparent
+  );
+  box-shadow:
+    0 0 6px 1px #ff2020b3,
+    0 0 18px 4px #ff202059;
+  animation: laser-pulse 1.4s ease-in-out infinite;
+}
+.laser.hit::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #30ff60 12%,
+    #80ff9a 50%,
+    #30ff60 88%,
+    transparent
+  );
+  box-shadow:
+    0 0 6px 1px #20ff60b3,
+    0 0 18px 4px #20ff6059;
+}
+.laser.hit::before {
+  background: radial-gradient(ellipse at center, #20ff603a 0%, transparent 70%);
+}
+@keyframes laser-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dbg {
+  margin: 0.5em 0;
+  padding: 0.5em 0.7em;
+  border: 1px dashed #f5a52480;
+  border-radius: 8px;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+.dbg[hidden] {
+  display: none;
+}
+.dbg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 0.8em;
+  align-items: center;
+}
+.dbg-next {
+  font-weight: 600;
+}
+.dbg-err {
+  color: #ff7070;
+}
+.dbg-flash {
+  outline: 4px solid #fff;
+  outline-offset: -4px;
+}

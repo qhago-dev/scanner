@@ -1,7 +1,9 @@
 // Presentación: navegación por teclado/táctil + diapositiva en vivo con la librería real.
 import { type DecodeStrategy, decode } from "@qhago/scanner";
 import type { QhagoScannerElement } from "@qhago/scanner/ui";
-import { captureFrame, debugOn, debugStats, debugSummary, dlog } from "./debug";
+import { applyFocus, trackOf } from "./camopts";
+import { dlog, mountDebug } from "./debug";
+import "./scan-ui.css";
 
 const slides = [...document.querySelectorAll<HTMLElement>("#deck > section")];
 const progress = document.getElementById("progress") as HTMLElement;
@@ -116,48 +118,25 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const camStats = $<HTMLElement>("cam-stats");
 const distWrap = $<HTMLElement>("dist-wrap");
 const dist = $<HTMLInputElement>("dist");
-type FocusCaps = MediaTrackCapabilities & {
-  focusMode?: string[];
-  focusDistance?: { min: number; max: number; step?: number };
+const laser = $<HTMLElement>("laser");
+const camVideo = () => camEl?.scanner?.video;
+const camTrack = (el: QhagoScannerElement) => trackOf(el.scanner?.video);
+const focusSel = $<HTMLSelectElement>("focus");
+const setFocus = async (el: QhagoScannerElement) => {
+  const msg = await applyFocus(camTrack(el), focusSel.value, dist, distWrap);
+  if (msg) camStats.textContent = msg;
 };
 
-function camTrack(el: QhagoScannerElement): MediaStreamTrack | undefined {
-  return (el.scanner?.video?.srcObject as MediaStream | null)?.getVideoTracks()[0];
-}
-
-/** Aplica el modo de enfoque elegido (el scanner pone "continuous" al arrancar si existe). */
-async function applyFocus(el: QhagoScannerElement): Promise<void> {
-  const track = camTrack(el);
-  const mode = $<HTMLSelectElement>("focus").value;
-  if (!track || mode === "device") return;
-  const caps = (track.getCapabilities?.() ?? {}) as FocusCaps;
-  const fd = caps.focusDistance;
-  distWrap.hidden = mode !== "manual" || !fd;
-  if (!caps.focusMode?.includes(mode)) {
-    camStats.textContent = `enfoque "${mode}" no soportado (modos: ${caps.focusMode?.join(", ") || "ninguno"})`;
-    return;
-  }
-  dlog("capabilities", {
-    caps: caps as unknown as Record<string, unknown>,
-    settings: track.getSettings(),
-  });
-  const c: Record<string, unknown> = { focusMode: mode };
-  if (mode === "manual" && fd) {
-    Object.assign(dist, { min: fd.min, max: fd.max, step: fd.step ?? 0.01 });
-    if (!dist.dataset.init) {
-      dist.value = String(fd.min + (fd.max - fd.min) * 0.1);
-      dist.dataset.init = "1";
-    }
-    c.focusDistance = Number(dist.value);
-  }
-  dlog("focus", c);
-  await track.applyConstraints({ advanced: [c] } as MediaTrackConstraints).catch((e) => {
-    dlog("focus-error", { message: (e as Error).message });
-    camStats.textContent = `no se pudo aplicar el enfoque: ${(e as Error).message}`;
-  });
-}
-
 let camEl: QhagoScannerElement | null = null;
+const dbg = mountDebug($<HTMLElement>("dbg"), {
+  video: camVideo,
+  info: () => ({
+    ai: $<HTMLSelectElement>("ai").value,
+    focus: focusSel.value,
+    settings: trackOf(camVideo())?.getSettings(),
+  }),
+  flash: () => $<HTMLElement>("cam-slot"),
+});
 
 async function openCam(): Promise<void> {
   const slot = $<HTMLElement>("cam-slot");
@@ -180,10 +159,9 @@ async function openCam(): Promise<void> {
       plugins: [aiDetector({ when: ai as "fallback" | "always" })],
     };
   }
-  dlog("open", { ai, resolution: [w, h], focus: $<HTMLSelectElement>("focus").value });
+  dlog("open", { ai, resolution: [w, h], focus: focusSel.value });
   let t0 = performance.now();
   let lastLog = 0;
-  let lastShot = 0;
   let fps = 0;
   let ms = 0;
   let passes: readonly string[] = [];
@@ -191,54 +169,38 @@ async function openCam(): Promise<void> {
   const render = () => {
     const track = el.isConnected ? camTrack(el) : undefined;
     const st = track?.getSettings() as (MediaTrackSettings & { focusMode?: string }) | undefined;
-    if (debugOn) $<HTMLElement>("dbg-n").textContent = debugSummary();
     camStats.textContent =
       `${st ? `${st.width}×${st.height} · enfoque ${st.focusMode ?? "?"}` : "…"} · IA ${ai}\n` +
       `${fps.toFixed(1)} fps · ${ms.toFixed(0)} ms/frame · ${passes.join(" ") || "—"}` +
       (last ? `\n${last}` : "");
   };
   el.addEventListener("statechange", (ev) => {
-    dlog("state", { state: (ev as CustomEvent<string>).detail });
-    if ((ev as CustomEvent<string>).detail !== "scanning") return;
+    const state = (ev as CustomEvent<string>).detail;
+    dlog("state", { state });
+    laser.hidden = state !== "scanning";
+    if (state !== "scanning") return;
     t0 = performance.now();
-    void applyFocus(el).then(() => {
-      const sc = el.scanner;
-      if (!sc) return;
-      sc.on("candidate", (e) =>
-        dlog("candidate", { format: e.result.format, text: e.result.text }),
-      );
-      sc.on("error", (e) =>
-        dlog("scanner-error", { code: e.error.code, message: e.error.message }),
-      );
-      sc.on("frame", (f) => {
-        fps = f.fps;
-        ms = f.ms;
-        passes = f.passes;
-        const now = performance.now();
-        if (now - lastLog > 1000) {
-          lastLog = now;
-          dlog("frame", {
-            fps: f.fps,
-            ms: f.ms,
-            passes: f.passes,
-            settings: camTrack(el)?.getSettings(),
-          });
-        }
-        // Sin lectura: un fotograma cada 1,5 s para reproducir el fallo en el banco de pruebas.
-        if ($<HTMLInputElement>("auto-shot").checked && now - lastShot > 1500 && now - t0 > 1500) {
-          lastShot = now;
-          void captureFrame(sc.video, "miss", {
-            ai,
-            fps: f.fps,
-            ms: f.ms,
-            passes: f.passes,
-            sinceDetectMs: Math.round(now - t0),
-          });
-        }
-        render();
-      });
+    const sc = el.scanner;
+    if (!sc) return;
+    sc.on("candidate", (e) => dlog("candidate", { format: e.result.format, text: e.result.text }));
+    sc.on("error", (e) => dlog("scanner-error", { code: e.error.code, message: e.error.message }));
+    sc.on("frame", (f) => {
+      fps = f.fps;
+      ms = f.ms;
+      passes = f.passes;
+      const now = performance.now();
+      if (now - lastLog > 1000) {
+        lastLog = now;
+        dlog("frame", {
+          fps: f.fps,
+          ms: f.ms,
+          passes: f.passes,
+          settings: camTrack(el)?.getSettings(),
+        });
+      }
       render();
     });
+    void setFocus(el).then(render);
   });
   el.addEventListener("error", (ev) =>
     dlog("element-error", {
@@ -249,18 +211,21 @@ async function openCam(): Promise<void> {
     const r = (ev as CustomEvent<{ format: string; text: string }>).detail;
     last = `detectado en ${((performance.now() - t0) / 1000).toFixed(1)} s`;
     dlog("detect", { format: r.format, text: r.text, afterMs: Math.round(performance.now() - t0) });
-    void captureFrame(el.scanner?.video, "detect", { ai, format: r.format, text: r.text });
+    dbg.noteDetect(r);
+    laser.classList.add("hit");
+    setTimeout(() => laser.classList.remove("hit"), 400);
     t0 = performance.now();
     out.textContent = `cámara → ${r.format}  ${r.text}`;
     render();
   });
-  slot.replaceChildren(el);
+  slot.replaceChildren(el, laser);
   camEl = el;
 }
 
 function closeCam(): void {
   dlog("close");
-  $<HTMLElement>("cam-slot").replaceChildren();
+  laser.hidden = true;
+  $<HTMLElement>("cam-slot").replaceChildren(laser);
   camEl = null;
   distWrap.hidden = true;
 }
@@ -277,17 +242,5 @@ for (const id of ["ai", "res"])
       void openCam();
     }
   });
-$<HTMLSelectElement>("focus").addEventListener("change", () => camEl && void applyFocus(camEl));
-dist.addEventListener("input", () => camEl && void applyFocus(camEl));
-
-// ---- Modo depuración ----
-if (debugOn) {
-  const dbg = $<HTMLElement>("dbg");
-  dbg.hidden = false;
-  debugStats.onChange = () => ($<HTMLElement>("dbg-n").textContent = debugSummary());
-  debugStats.onChange();
-  $<HTMLButtonElement>("snap").addEventListener("click", () => {
-    if (camEl)
-      void captureFrame(camEl.scanner?.video, "manual", { ai: $<HTMLSelectElement>("ai").value });
-  });
-}
+focusSel.addEventListener("change", () => camEl && void setFocus(camEl));
+dist.addEventListener("input", () => camEl && void setFocus(camEl));

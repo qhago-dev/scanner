@@ -218,6 +218,9 @@ kbd {
   margin: 0.4em 0 0;
   white-space: pre-wrap;
 }
+#cam-slot {
+  position: relative;
+}
 #cam-slot qhago-scanner {
   width: 100%;
   margin-top: 0.6em;

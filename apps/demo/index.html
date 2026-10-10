@@ -15,6 +15,7 @@
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
       <div id="roi" hidden></div>
+      <div id="laser" class="laser" hidden></div>
     </section>
     <section class="controls">
       <button type="button" id="start">▶ Iniciar</button>
@@ -25,8 +26,20 @@
       <label>Zoom <input type="range" id="zoom" min="1" max="1" step="0.1" value="1" disabled /></label>
       <label><input type="checkbox" id="use-roi" /> ROI central</label>
       <label><input type="checkbox" id="all-formats" /> Todos los formatos</label>
+      <label>IA
+        <select id="ai"><option value="off" selected>sin IA</option><option value="fallback">IA si falla</option><option value="always">IA siempre</option></select>
+      </label>
+      <label>Enfoque
+        <select id="focus"><option value="continuous" selected>continuo</option><option value="single-shot">un disparo</option><option value="manual">manual</option><option value="device">el del equipo</option></select>
+      </label>
+      <label id="dist-wrap" hidden>Distancia <input id="dist" type="range" /></label>
+      <label>Resolución
+        <select id="res"><option value="1280x720" selected>720p</option><option value="1920x1080">1080p</option></select>
+      </label>
+      <label><input type="checkbox" id="use-laser" checked /> Línea guía</label>
     </section>
     <p id="stats" class="hint">—</p>
+    <div id="dbg" class="dbg" hidden></div>
     <ol id="results"></ol>
     <section>
       <h2>Desde archivo</h2>

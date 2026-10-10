@@ -13,6 +13,7 @@ export default defineConfig({
         collect: resolve(import.meta.dirname, "collect.html"),
         bench: resolve(import.meta.dirname, "bench.html"),
         diagnostics: resolve(import.meta.dirname, "diagnostics.html"),
+        presentacion: resolve(import.meta.dirname, "presentacion.html"),
       },
     },
   },

@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@qhago/scanner — cómo funciona y cómo usarlo</title>
+    <link rel="stylesheet" href="/src/presentacion.css" />
+  </head>
+  <body>
+    <div id="progress" aria-hidden="true"></div>
+    <main id="deck">
+      <!-- 1 -->
+      <section class="title">
+        <p class="kicker">Presentación para desarrolladores · 2026-10-10</p>
+        <h1>@qhago/scanner</h1>
+        <p class="lead">Lector de códigos de barras y QR para web, Node y Bun.<br />ZXing-C++ en WebAssembly, fusión multi-frame y detector IA opcional.</p>
+        <p class="hint">← → o espacio para avanzar · <kbd>F</kbd> pantalla completa · <kbd>O</kbd> índice</p>
+      </section>
+
+      <!-- 2 -->
+      <section>
+        <h2>El problema</h2>
+        <div class="cols">
+          <div>
+            <h3>QuaggaJS / Quagga2</h3>
+            <ul>
+              <li>Solo códigos 1D, JS puro</li>
+              <li>13,7 % de recall en los samples de ZXing</li>
+              <li>Sin QR, DataMatrix, PDF417, Aztec</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Lo que queríamos</h3>
+            <ul>
+              <li>13 formatos (los de <code>BarcodeDetector</code>)</li>
+              <li>Mejor que zxing-wasm en fotos difíciles</li>
+              <li>Cámara fluida: el hilo principal no trabaja</li>
+              <li>Misma API en navegador, Node y Bun</li>
+              <li>Migrar desde Quagga cambiando un import</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section>
+        <h2>Arquitectura</h2>
+        <pre class="diagram">
+ Hilo principal                         Web Worker (uno, reutilizado)
+┌───────────────────────────┐          ┌──────────────────────────────────────────┐
+│ decode() · createScanner()│  frames  │ ScannerSession                           │
+│ &lt;qhago-scanner&gt; · polyfill│ ───────▶ │  ├─ cascada ZXing (WASM, 319 KB gzip)    │
+│ quagga-compat             │          │  ├─ tracker + fusión multi-frame         │
+│                           │ ◀─────── │  ├─ escalado: ROI thorough / barrido     │
+│ eventos detect / track …  │ eventos  │  └─ plugins (p. ej. detector IA)         │
+└───────────────────────────┘          └──────────────────────────────────────────┘
+        Node / Bun: mismo motor (build node, PNG/JPEG con stb_image), sin worker</pre>
+        <ul class="small">
+          <li><b>Una ABI C</b> (<code>sa_*</code>) entre JS y C++: opciones como <code>Int32Array</code>, resultados en JSON.</li>
+          <li><b>3 rutas de captura</b>: <code>MediaStreamTrackProcessor</code> → <code>requestVideoFrameCallback</code> → inline (sin worker).</li>
+        </ul>
+      </section>
+
+      <!-- 4 -->
+      <section>
+        <h2>Dentro del motor: la cascada</h2>
+        <div class="cols">
+          <div>
+            <table>
+              <tr><th>strategy</th><th>pasadas</th></tr>
+              <tr><td><code>fast</code></td><td>base (tryHarder)</td></tr>
+              <tr><td><code>balanced</code></td><td>+ CLAHE, unsharp, ×2, inversión</td></tr>
+              <tr><td><code>thorough</code></td><td>+ ×0,5, recortes, más rotaciones</td></tr>
+            </table>
+            <p class="small">Para en cuanto hay <code>maxSymbols</code> lecturas válidas.</p>
+          </div>
+          <div>
+            <ul>
+              <li>Validación: checksums + filtros de longitud (<code>validateChecksums</code>)</li>
+              <li>UPC-A ⇄ EAN-13 normalizado</li>
+              <li><code>confidence</code>: 2D = 1 (Reed-Solomon); 1D = líneas de escaneo coincidentes</li>
+              <li>Paridad WASM ≡ nativo: 11 388 combinaciones idénticas</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section>
+        <h2>En vídeo: tracking y fusión</h2>
+        <ul>
+          <li><b>Tracker</b>: cada símbolo (leído o no) recibe un <code>trackId</code> estable entre frames.</li>
+          <li><b>Fusión</b> (ADR-05): Code39/93, Codabar, ITF y Code128 cortos piden <b>2 frames</b> coincidentes; el resto, 1.</li>
+          <li><b>Escalado</b>: un track sin leer 2 veces → <code>thorough</code> en su ROI; nada en <i>k</i> frames → barrido por zonas.</li>
+          <li><b>Scheduler</b>: 1 frame en vuelo, ritmo ≈ 1,2 × lo que tarda el motor (no se acumula retraso).</li>
+        </ul>
+        <pre class="diagram small">frame ─▶ cascada ─▶ tracker ─▶ fusión ─┬─▶ "candidate" (aún sin consenso)
+                                       ├─▶ "detect"    (confirmado, una vez por cooldown)
+                                       ├─▶ "track"     (posición nueva de algo ya leído)
+                                       └─▶ "lost"      (el track desaparece)</pre>
+      </section>
+
+      <!-- 6 -->
+      <section class="section">
+        <p class="kicker">Formas de usarlo</p>
+        <h2>1 · <code>decode()</code>: imágenes y archivos</h2>
+      </section>
+
+      <!-- 7 -->
+      <section>
+        <h2><code>decode()</code> en el navegador</h2>
+        <pre><code><span class="k">import</span> { decode } <span class="k">from</span> <span class="s">"@qhago/scanner"</span>;
+
+input.onchange = <span class="k">async</span> () =&gt; {
+  <span class="k">const</span> results = <span class="k">await</span> decode(input.files[<span class="n">0</span>], {
+    formats: [<span class="s">"qr_code"</span>, <span class="s">"ean_13"</span>],   <span class="c">// default: los 8 de ADR-05</span>
+    strategy: <span class="s">"thorough"</span>,              <span class="c">// fast | balanced | thorough</span>
+  });
+  <span class="k">for</span> (<span class="k">const</span> r <span class="k">of</span> results)
+    console.log(r.format, r.text, r.cornerPoints, r.confidence);
+};</code></pre>
+        <ul class="small">
+          <li>Acepta <code>File/Blob</code>, <code>ArrayBuffer</code>, <code>&lt;img&gt;</code>, <code>&lt;canvas&gt;</code>, <code>ImageBitmap</code>, <code>ImageData</code>, <code>VideoFrame</code>, <code>{ data, width, height, format }</code>.</li>
+          <li>En el hilo principal delega en un <b>worker interno</b> automáticamente (<code>worker: false</code> para desactivarlo).</li>
+          <li><code>region</code> (px), <code>maxSymbols</code>, <code>timeBudgetMs</code>, <code>signal</code> (AbortController), <code>includeErrors</code>.</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section>
+        <h2><code>decode()</code> en Node y Bun</h2>
+        <pre><code><span class="k">import</span> { readFile } <span class="k">from</span> <span class="s">"node:fs/promises"</span>;
+<span class="k">import</span> { decode, isScanError } <span class="k">from</span> <span class="s">"@qhago/scanner"</span>;   <span class="c">// export condition "node" / "bun"</span>
+
+<span class="k">try</span> {
+  <span class="k">const</span> [r] = <span class="k">await</span> decode(<span class="k">await</span> readFile(<span class="s">"etiqueta.png"</span>));  <span class="c">// PNG / JPEG</span>
+  console.log(r?.text);
+} <span class="k">catch</span> (e) {
+  <span class="k">if</span> (isScanError(e)) console.error(e.code, e.docsUrl);    <span class="c">// INVALID_INPUT, ABORTED…</span>
+}</code></pre>
+        <ul class="small">
+          <li>Node ≥ 22.12 y Bun ≥ 1.2. Mismo motor y mismos resultados (snapshot idéntico en 571 imágenes).</li>
+          <li>Para paralelizar lotes: una instancia por <code>worker_threads</code> / <code>Bun.Worker</code>.</li>
+          <li><code>createScanner()</code> en Node lanza <code>ScanError("UNSUPPORTED")</code> (no hay cámara).</li>
+        </ul>
+      </section>
+
+      <!-- 9 -->
+      <section class="section">
+        <p class="kicker">Formas de usarlo</p>
+        <h2>2 · <code>createScanner()</code>: cámara</h2>
+      </section>
+
+      <!-- 10 -->
+      <section>
+        <h2>Escáner de cámara</h2>
+        <pre><code><span class="k">import</span> { createScanner, mapToElement } <span class="k">from</span> <span class="s">"@qhago/scanner"</span>;
+
+<span class="k">const</span> scanner = createScanner({
+  video: document.querySelector(<span class="s">"video"</span>),
+  formats: [<span class="s">"ean_13"</span>, <span class="s">"qr_code"</span>],
+  roi: { x: <span class="n">0.1</span>, y: <span class="n">0.3</span>, width: <span class="n">0.8</span>, height: <span class="n">0.4</span> },   <span class="c">// normalizada 0..1</span>
+  fusion: { duplicateCooldownMs: <span class="n">2000</span> },
+});
+
+scanner.on(<span class="s">"detect"</span>, ({ result }) =&gt; addToCart(result.text));
+scanner.on(<span class="s">"track"</span>, ({ result }) =&gt;               <span class="c">// overlay: vídeo → CSS</span>
+  draw(result.trackId, mapToElement(result.cornerPoints, video)));
+scanner.on(<span class="s">"error"</span>, ({ error }) =&gt; show(error.code)); <span class="c">// PERMISSION_DENIED…</span>
+
+<span class="k">await</span> scanner.start();</code></pre>
+      </section>
+
+      <!-- 11 -->
+      <section>
+        <h2>Control de la cámara y ciclo de vida</h2>
+        <div class="cols">
+          <pre><code><span class="k">await</span> scanner.start({ signal });
+scanner.pause();  scanner.resume();
+<span class="k">await</span> scanner.stop();
+scanner.destroy();         <span class="c">// sin fugas</span>
+
+scanner.getCapabilities(); <span class="c">// torch, zoom</span>
+<span class="k">await</span> scanner.setTorch(<span class="k">true</span>);
+<span class="k">await</span> scanner.setZoom(<span class="n">2</span>);
+<span class="k">const</span> cams = <span class="k">await</span> scanner.listCameras();
+<span class="k">await</span> scanner.switchCamera(cams[<span class="n">1</span>].deviceId);</code></pre>
+          <ul class="small">
+            <li>Elige la cámara trasera <b>principal</b> (no la gran angular) por capabilities.</li>
+            <li>Recuerda la última cámara (<code>rememberCamera</code>).</li>
+            <li><code>stream</code>: usa un <code>MediaStream</code> tuyo.</li>
+            <li><code>frameStats: true</code> → eventos <code>frame</code> con fps y ms.</li>
+            <li><code>getPermissionState()</code> antes de pedir permiso.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section class="section">
+        <p class="kicker">Formas de usarlo</p>
+        <h2>3 · Sin escribir JS de cámara</h2>
+      </section>
+
+      <!-- 13 -->
+      <section>
+        <h2><code>&lt;qhago-scanner&gt;</code>: Custom Element</h2>
+        <pre><code>&lt;<span class="k">qhago-scanner</span> formats=<span class="s">"ean_13,qr_code"</span> roi=<span class="s">"0.1,0.3,0.8,0.4"</span>
+               torch-button switch-camera-button beep vibrate lang=<span class="s">"es"</span>&gt;
+&lt;/<span class="k">qhago-scanner</span>&gt;
+
+&lt;<span class="k">script</span> type=<span class="s">"module"</span>&gt;
+  <span class="k">import</span> <span class="s">"@qhago/scanner/ui"</span>;            <span class="c">// o el dist/browser/ui.js de un CDN</span>
+  document.querySelector(<span class="s">"qhago-scanner"</span>)
+    .addEventListener(<span class="s">"detect"</span>, (e) =&gt; console.log(e.detail.text));
+&lt;/<span class="k">script</span>&gt;</code></pre>
+        <ul class="small">
+          <li>Shadow DOM, <code>::part()</code> y variables <code>--qhago-accent</code> / <code>--qhago-mask</code>.</li>
+          <li>Overlay animado por <code>trackId</code>, <code>aria-live</code>, labels es/en; axe-core sin violaciones.</li>
+          <li>Atributo <code>paused</code> para arrancar bajo demanda; SSR-safe.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section>
+        <h2>Polyfill de <code>BarcodeDetector</code></h2>
+        <pre><code><span class="k">import</span> { installPolyfill } <span class="k">from</span> <span class="s">"@qhago/scanner/polyfill"</span>;
+installPolyfill();                      <span class="c">// solo si el navegador no lo trae</span>
+
+<span class="k">const</span> det = <span class="k">new</span> BarcodeDetector({ formats: [<span class="s">"qr_code"</span>] });
+<span class="k">const</span> [code] = <span class="k">await</span> det.detect(video);  <span class="c">// API estándar W3C</span>
+console.log(code?.rawValue, code?.cornerPoints);</code></pre>
+        <ul class="small">
+          <li>Código escrito para Chrome Android funciona en Firefox, Safari y Node (también exporta para Node/Bun).</li>
+          <li>Acepta todo <code>ImageBitmapSource</code>, incluidos <code>&lt;video&gt;</code> y <code>SVGImageElement</code>; <code>TypeError</code> donde la spec lo exige.</li>
+          <li>Alternativa: <code>decode(img, { engine: "auto" })</code> usa el nativo si soporta los formatos.</li>
+        </ul>
+      </section>
+
+      <!-- 15 -->
+      <section>
+        <h2>Migrar desde Quagga2</h2>
+        <pre><code><span class="c">- import Quagga from "@ericblade/quagga2";</span>
+<span class="s">+ import Quagga from "@qhago/scanner/quagga-compat";</span>
+
+Quagga.init({
+  inputStream: { type: <span class="s">"LiveStream"</span>, target: <span class="s">"#interactive"</span> },
+  decoder: { readers: [<span class="s">"ean_reader"</span>, <span class="s">"code_128_reader"</span>] },
+}, (err) =&gt; !err &amp;&amp; Quagga.start());
+
+Quagga.onDetected((r) =&gt; console.log(r.codeResult.code));
+Quagga.onProcessed((r) =&gt; Quagga.ImageDebug.drawPath(r.box, { x: <span class="n">0</span>, y: <span class="n">1</span> },
+                                Quagga.canvas.ctx.overlay, { color: <span class="s">"blue"</span> }));</code></pre>
+        <ul class="small">
+          <li><code>box</code>, <code>boxes</code>, <code>line</code>, <code>canvas.ctx.overlay</code>, <code>decodeSingle</code>, <code>CameraAccess</code>; VIN en <code>code_39_vin_reader</code>.</li>
+          <li>Opciones que no aplican (<code>locator.patchSize</code>…) avisan <b>una vez</b>. Ejemplo: <code>apps/examples/quagga-migration</code>.</li>
+        </ul>
+      </section>
+
+      <!-- 16 -->
+      <section>
+        <h2>Interpretar el contenido: parsers</h2>
+        <pre><code><span class="k">import</span> { parseGS1, parseQRContent, parseAAMVA, parseISO15434 } <span class="k">from</span> <span class="s">"@qhago/scanner/parsers"</span>;
+
+parseGS1(<span class="s">"(01)07501031311309(17)261231(10)LOTE1"</span>);
+<span class="c">// { gtin: "07501031311309", expiry: "2026-12-31", batch: "LOTE1", ais: {…}, errors: [] }</span>
+
+parseQRContent(<span class="s">"WIFI:T:WPA;S:Casa;P:clave;;"</span>);
+<span class="c">// { type: "wifi", ssid: "Casa", password: "clave", security: "WPA", hidden: false }</span>
+
+parseAAMVA(pdf417.text);     <span class="c">// licencias de conducir EE. UU./Canadá → nombre, fechas ISO…</span>
+parseISO15434(datamatrix.text); <span class="c">// sobres "[)>" con Data Identifiers o AIs GS1</span></code></pre>
+        <p class="small">Funciones puras (4,3 KB gzip), sin motor: sirven también en servidor. GS1 acepta paréntesis, FNC1 y <code>]C1</code>/<code>]d2</code>/<code>]Q3</code>.</p>
+      </section>
+
+      <!-- 17 -->
+      <section class="section">
+        <p class="kicker">Formas de usarlo</p>
+        <h2>4 · Despliegue: bundlers, CDN, CSP</h2>
+      </section>
+
+      <!-- 18 -->
+      <section>
+        <h2>Bundlers, CDN y CSP</h2>
+        <div class="cols">
+          <div>
+            <h3>Vite</h3>
+            <pre><code><span class="c">// vite.config.ts</span>
+optimizeDeps: { exclude: [<span class="s">"@qhago/scanner"</span>] },
+worker: { format: <span class="s">"es"</span> },</code></pre>
+            <p class="small">Si falta, el error <code>ENGINE_LOAD_FAILED</code> lo dice.</p>
+            <h3>webpack 5</h3>
+            <p class="small">Sin configuración: <code>new URL(…, import.meta.url)</code>.</p>
+          </div>
+          <div>
+            <h3>Self-hosting / CDN</h3>
+            <pre><code>configure({
+  wasmUrl: <span class="s">"/assets/qhago_engine.wasm"</span>,
+  workerUrl: <span class="s">"/assets/worker.js"</span>,
+});</code></pre>
+            <h3>CSP estricta (probada en e2e)</h3>
+            <pre class="small"><code>script-src 'self' 'wasm-unsafe-eval' &lt;cdn&gt;;
+worker-src 'self' blob: &lt;cdn&gt;;</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section>
+        <h2>Errores y diagnóstico</h2>
+        <div class="cols">
+          <table>
+            <tr><th>code</th><th>cuándo</th></tr>
+            <tr><td><code>PERMISSION_DENIED</code></td><td>el usuario negó la cámara</td></tr>
+            <tr><td><code>NO_CAMERA</code> / <code>CAMERA_IN_USE</code></td><td>hardware</td></tr>
+            <tr><td><code>INSECURE_CONTEXT</code></td><td>cámara sin HTTPS</td></tr>
+            <tr><td><code>UNSUPPORTED</code></td><td>entorno / plugin sin worker</td></tr>
+            <tr><td><code>ENGINE_LOAD_FAILED</code></td><td>.wasm, ABI, CSP, Vite</td></tr>
+            <tr><td><code>INVALID_INPUT</code> / <code>ABORTED</code></td><td>entrada / signal</td></tr>
+          </table>
+          <pre><code><span class="k">import</span> { getEnvironmentReport } <span class="k">from</span> <span class="s">"@qhago/scanner"</span>;
+<span class="k">const</span> r = <span class="k">await</span> getEnvironmentReport();
+<span class="c">// { version, abi, runtime, features: {
+//   wasmSimd, moduleWorker, videoFrame,
+//   mediaStreamTrackProcessor, … },
+//   camera: { permission, devices } }</span></code></pre>
+        </div>
+        <p class="small">Todo error lleva <code>docsUrl</code>. El informe no incluye ids ni nombres de cámaras (para adjuntar en issues). Página: <a href="/diagnostics.html">diagnostics.html</a>.</p>
+      </section>
+
+      <!-- 20 -->
+      <section>
+        <h2>5 · Detector IA opcional (experimental)</h2>
+        <pre><code><span class="k">import</span> { createScanner } <span class="k">from</span> <span class="s">"@qhago/scanner"</span>;
+<span class="k">import</span> { aiDetector, aiWorker } <span class="k">from</span> <span class="s">"@qhago/ai"</span>;
+
+createScanner({ workerFactory: aiWorker, plugins: [aiDetector({ when: <span class="s">"fallback"</span> })] });</code></pre>
+        <ul class="small">
+          <li>Red propia (CenterNet-lite, 0,24 GMAC, 330 KB INT8) que propone 4 esquinas; el motor <b>rectifica</b> y ZXing lee. No puede inventar lecturas.</li>
+          <li>Corre en el mismo worker (ONNX Runtime Web, WASM); solo cuando el clásico no lee, como mucho cada 300 ms.</li>
+          <li>Fotos reales: <b>+7,0 pp</b> de recall (desenfocadas ×2,8), 0 lecturas falsas extra; ~40 ms por inferencia. <b>Sin publicar</b> hasta medirlo en móvil.</li>
+          <li>Interfaz de plugins abierta: <code>startWorkerHost({ plugins })</code> en <code>@qhago/scanner/worker-host</code>.</li>
+        </ul>
+      </section>
+
+      <!-- 21 -->
+      <section id="results">
+        <h2>Resultados</h2>
+        <div id="results-body">
+          <table>
+            <tr><th>Dataset</th><th>qhago</th><th>zxing-wasm</th><th>zxing-js</th><th>Quagga2</th></tr>
+            <tr><td>Samples de ZXing (regresión)</td><td><b>91,5 %</b></td><td>87,5 %</td><td>59,1 %</td><td>13,7 %</td></tr>
+            <tr><td>Sintético, split test</td><td><b>81,0 %</b></td><td>73,0 %</td><td>—</td><td>—</td></tr>
+            <tr><td><b>Fotos reales</b> (1 840, split test)</td><td><b>76,9 %</b></td><td>71,4 %</td><td>57,6 %</td><td>42,9 %</td></tr>
+            <tr><td>Fotos reales + detector IA</td><td><b>83,9 %</b></td><td colspan="3" class="small">+7,0 pp sin más lecturas falsas · desenfocadas 11,8 % → 32,9 %</td></tr>
+          </table>
+          <p class="small">Recall por muestra. Fotos reales: ArTe-Lab, KAIST y Muenster (EAN-13/EAN-8, móviles de 2008-2020). qhago vs zxing-wasm: +5,5 pp (IC 95 % [4,4; 6,7]). Lecturas falsas: qhago 1,2 %, zxing-wasm 1,6 %, Quagga2 4,1 %.</p>
+        </div>
+      </section>
+
+      <!-- 22 -->
+      <section>
+        <h2>Tamaño y calidad</h2>
+        <div class="cols">
+          <table>
+            <tr><th>Qué importas</th><th>gzip</th></tr>
+            <tr><td><code>decode</code></td><td>8,7 KB</td></tr>
+            <tr><td><code>createScanner</code></td><td>13,4 KB</td></tr>
+            <tr><td><code>parsers</code></td><td>4,3 KB</td></tr>
+            <tr><td>motor WASM</td><td>319 KB</td></tr>
+          </table>
+          <ul class="small">
+            <li>Cobertura 88 % (Node + Chromium + cámara simulada).</li>
+            <li>Chromium, Firefox y WebKit; Node 22/24 y Bun.</li>
+            <li>Fuzzing libFuzzer + ASan/UBSan y fast-check.</li>
+            <li>Snapshot de API pública en CI: romperla exige major.</li>
+            <li>0 dependencias de runtime en <code>@qhago/scanner</code>.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 23 -->
+      <section id="live">
+        <h2>Pruébalo aquí</h2>
+        <div class="cols">
+          <div>
+            <div id="drop">Arrastra una imagen o <label class="btn">elige un archivo<input id="file" type="file" accept="image/*" hidden /></label></div>
+            <label class="small">strategy
+              <select id="strategy"><option>fast</option><option selected>balanced</option><option>thorough</option></select>
+            </label>
+            <pre id="out" class="small" aria-live="polite">—</pre>
+          </div>
+          <div>
+            <button type="button" id="cam" class="btn">📷 Abrir cámara</button>
+            <div id="cam-slot"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 24 -->
+      <section class="title">
+        <h2>Resumen</h2>
+        <table class="summary">
+          <tr><td>Una foto o archivo</td><td><code>decode(file)</code></td></tr>
+          <tr><td>Cámara con control total</td><td><code>createScanner()</code></td></tr>
+          <tr><td>Cámara en 3 líneas</td><td><code>&lt;qhago-scanner&gt;</code></td></tr>
+          <tr><td>Código estándar W3C</td><td><code>installPolyfill()</code></td></tr>
+          <tr><td>Proyecto con Quagga</td><td><code>@qhago/scanner/quagga-compat</code></td></tr>
+          <tr><td>Servidor / CLI</td><td><code>decode(buffer)</code> en Node o Bun</td></tr>
+          <tr><td>GS1, WiFi, vCard, licencias</td><td><code>@qhago/scanner/parsers</code></td></tr>
+        </table>
+        <p class="hint">Repo: <code>docs/roadmap-v1/</code> (SDD) · <code>docs/guias/</code> · <code>apps/examples/</code></p>
+      </section>
+    </main>
+    <nav id="toc" hidden></nav>
+    <script type="module" src="/src/presentacion.ts"></script>
+  </body>
+</html>

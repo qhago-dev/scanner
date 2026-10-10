@@ -53,6 +53,8 @@ export class BarcodeDetectorPolyfill {
     let input = image as unknown;
     const isVideo = typeof HTMLVideoElement === "function" && image instanceof HTMLVideoElement;
     const isSvg = typeof SVGImageElement === "function" && image instanceof SVGImageElement;
+    // Spec: un <video> sin frame actual (HAVE_NOTHING / HAVE_METADATA) resuelve con lista vacía.
+    if (isVideo && (image as HTMLVideoElement).readyState < 2) return [];
     if (isVideo || isSvg) input = await createImageBitmap(image as ImageBitmapSource);
     const results = await decode(input as never, { formats: this.formats, strategy: "balanced" });
     if (input !== image) (input as ImageBitmap).close();

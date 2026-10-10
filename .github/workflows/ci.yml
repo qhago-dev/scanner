@@ -62,8 +62,8 @@ jobs:
       # F6.1: node + browser (Chromium) + camera con umbral de cobertura (vitest.config.ts).
       - run: cd packages/scanner && bun run coverage
       - run: cd packages/scanner && QHAGO_BROWSERS=firefox,webkit bunx vitest run --project browser
-      # Cámara simulada en Firefox y WebKit (shim de getUserMedia con canvas.captureStream).
-      - run: cd packages/scanner && QHAGO_CAMERA_WEBKIT=1 bunx vitest run --project camera
+      # Cámara simulada en Firefox (shim). WebKit en Linux no reproduce captureStream: Safari va en la matriz manual.
+      - run: cd packages/scanner && bunx vitest run --project camera
       - run: bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build
       # F6.4: presupuestos de tamaño por entry y escenarios con tree-shaking.
       - run: cd packages/scanner && bun run size

@@ -32,6 +32,8 @@ export interface Sample {
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DATASETS: Record<string, string> = {
   real: join(HERE, "real/manifest.jsonl"),
+  /** Datasets públicos reales (ArTe-Lab, KAIST, Muenster): public/fetch.sh + public/import.py. */
+  public: join(HERE, "public/manifest.jsonl"),
   synthetic: join(HERE, "synthetic/out/manifest.jsonl"),
   "synthetic-video": join(HERE, "synthetic/out/manifest-video.jsonl"),
   zxing: join(HERE, "zxing/manifest.jsonl"),

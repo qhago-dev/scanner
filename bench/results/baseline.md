@@ -21,3 +21,15 @@ Hallazgos que el benchmark obligó a corregir (ver F2 tareas): multi-código (ca
 invertidos (pasada propia), normalización UPC-A.
 
 Detalle: `2026-10-10-a65c643-*.md`. Umbrales de G2/G3/G5: se fijan con el dataset **real** (pendiente de captura).
+
+## Fotos reales públicas (2026-10-10, `dataset/public`, split test, 1 840 imágenes EAN-13/EAN-8)
+
+| Motor | Recall | Lecturas falsas |
+|---|---|---|
+| qhago | 76,9 % | 1,2 % |
+| qhago + detector IA | 83,9 % | 1,2 % |
+| zxing-wasm | 71,4 % | 1,6 % |
+| zxing-js | 57,6 % | 1,0 % |
+| Quagga2 | 42,9 % | 4,1 % |
+
+qhago − zxing-wasm = +5,5 pp (IC 95 % [4,4; 6,7]), "mejor". Informe: `2026-10-10-fba9312-public-test.md`.

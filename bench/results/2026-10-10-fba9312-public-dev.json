@@ -1,0 +1,426 @@
+{
+  "meta": {
+    "dataset": "public",
+    "split": "dev",
+    "date": "2026-10-10",
+    "commit": "fba9312",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+    "runtime": "Bun 1.3.12"
+  },
+  "engines": [
+    {
+      "name": "qhago",
+      "version": "0.0.0",
+      "notes": "strategy balanced, los 13 formatos, validateChecksums por defecto"
+    },
+    {
+      "name": "qhago+ai",
+      "version": "0.0.0",
+      "notes": "qhago balanced + detector detector.int8.onnx (fallback, umbral 0.4, máx. 5 regiones)"
+    },
+    {
+      "name": "zxing-wasm",
+      "version": "3.1.5",
+      "notes": "readBarcodes con tryHarder y textMode Plain (igual que qhago), todos los formatos; se filtran a los 13 de 1.0"
+    },
+    {
+      "name": "zxing-js",
+      "version": "0.21.3",
+      "notes": "MultiFormatReader + HybridBinarizer, TRY_HARDER; lee 1 código por imagen"
+    },
+    {
+      "name": "quagga2",
+      "version": "1.12.1",
+      "notes": "decodeSingle con locate:true, size 800, todos sus readers 1D; en Node solo acepta rutas (incluye su propio decode de la imagen)"
+    }
+  ],
+  "global": {
+    "qhago": {
+      "samples": 765,
+      "positives": 765,
+      "negatives": 0,
+      "recallSample": 0.8026143790849674,
+      "recallCode": 0.8026143790849674,
+      "reads": 629,
+      "falseReads": 7,
+      "falseReadRate": 0.011128775834658187,
+      "negativesFp": null,
+      "p50": 9.86068399999931,
+      "p95": 363.2391239999997,
+      "p99": 498.5581319999983,
+      "errors": 0
+    },
+    "qhago+ai": {
+      "samples": 765,
+      "positives": 765,
+      "negatives": 0,
+      "recallSample": 0.8836601307189542,
+      "recallCode": 0.8836601307189542,
+      "reads": 695,
+      "falseReads": 9,
+      "falseReadRate": 0.012949640287769784,
+      "negativesFp": null,
+      "p50": 11.081573999981629,
+      "p95": 364.5179870000029,
+      "p99": 514.0166360000003,
+      "errors": 0
+    },
+    "zxing-wasm": {
+      "samples": 765,
+      "positives": 765,
+      "negatives": 0,
+      "recallSample": 0.7633986928104575,
+      "recallCode": 0.7633986928104575,
+      "reads": 600,
+      "falseReads": 10,
+      "falseReadRate": 0.016666666666666666,
+      "negativesFp": null,
+      "p50": 13.82799600000726,
+      "p95": 147.9683969999969,
+      "p99": 196.56228799998644,
+      "errors": 0
+    },
+    "zxing-js": {
+      "samples": 765,
+      "positives": 765,
+      "negatives": 0,
+      "recallSample": 0.5973856209150327,
+      "recallCode": 0.5973856209150327,
+      "reads": 465,
+      "falseReads": 5,
+      "falseReadRate": 0.010752688172043012,
+      "negativesFp": null,
+      "p50": 15.456794999990962,
+      "p95": 105.53409000000102,
+      "p99": 156.24965400001383,
+      "errors": 0
+    },
+    "quagga2": {
+      "samples": 765,
+      "positives": 765,
+      "negatives": 0,
+      "recallSample": 0.42483660130718953,
+      "recallCode": 0.42483660130718953,
+      "reads": 374,
+      "falseReads": 9,
+      "falseReadRate": 0.02406417112299465,
+      "negativesFp": null,
+      "p50": 32.74936900001194,
+      "p95": 84.2384779999993,
+      "p99": 114.112337999999,
+      "errors": 0
+    }
+  },
+  "byScenario": {
+    "qhago": {
+      "defocus": {
+        "samples": 61,
+        "positives": 61,
+        "negatives": 0,
+        "recallSample": 0.3770491803278688,
+        "recallCode": 0.3770491803278688,
+        "reads": 25,
+        "falseReads": 0,
+        "falseReadRate": 0,
+        "negativesFp": null,
+        "p50": 62.051940999997896,
+        "p95": 95.27732400000241,
+        "p99": 172.95563099999708,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 704,
+        "positives": 704,
+        "negatives": 0,
+        "recallSample": 0.8394886363636364,
+        "recallCode": 0.8394886363636364,
+        "reads": 604,
+        "falseReads": 7,
+        "falseReadRate": 0.011589403973509934,
+        "negativesFp": null,
+        "p50": 9.130882000012207,
+        "p95": 368.2485949999973,
+        "p99": 498.5581319999983,
+        "errors": 0
+      }
+    },
+    "qhago+ai": {
+      "defocus": {
+        "samples": 61,
+        "positives": 61,
+        "negatives": 0,
+        "recallSample": 0.7213114754098361,
+        "recallCode": 0.7213114754098361,
+        "reads": 48,
+        "falseReads": 2,
+        "falseReadRate": 0.041666666666666664,
+        "negativesFp": null,
+        "p50": 123.05181399999128,
+        "p95": 276.1644379999998,
+        "p99": 318.26199199999974,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 704,
+        "positives": 704,
+        "negatives": 0,
+        "recallSample": 0.8977272727272727,
+        "recallCode": 0.8977272727272727,
+        "reads": 647,
+        "falseReads": 7,
+        "falseReadRate": 0.010819165378670788,
+        "negativesFp": null,
+        "p50": 10.123667000007117,
+        "p95": 370.59739000000263,
+        "p99": 514.0166360000003,
+        "errors": 0
+      }
+    },
+    "zxing-wasm": {
+      "defocus": {
+        "samples": 61,
+        "positives": 61,
+        "negatives": 0,
+        "recallSample": 0.36065573770491804,
+        "recallCode": 0.36065573770491804,
+        "reads": 24,
+        "falseReads": 1,
+        "falseReadRate": 0.041666666666666664,
+        "negativesFp": null,
+        "p50": 35.880548000001,
+        "p95": 47.449813999999606,
+        "p99": 77.24510200000077,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 704,
+        "positives": 704,
+        "negatives": 0,
+        "recallSample": 0.7982954545454546,
+        "recallCode": 0.7982954545454546,
+        "reads": 576,
+        "falseReads": 9,
+        "falseReadRate": 0.015625,
+        "negativesFp": null,
+        "p50": 12.892841000008048,
+        "p95": 150.1351330000034,
+        "p99": 196.56228799998644,
+        "errors": 0
+      }
+    },
+    "zxing-js": {
+      "defocus": {
+        "samples": 61,
+        "positives": 61,
+        "negatives": 0,
+        "recallSample": 0.3770491803278688,
+        "recallCode": 0.3770491803278688,
+        "reads": 24,
+        "falseReads": 1,
+        "falseReadRate": 0.041666666666666664,
+        "negativesFp": null,
+        "p50": 70.33417099999497,
+        "p95": 98.25286200000119,
+        "p99": 126.20317500000237,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 704,
+        "positives": 704,
+        "negatives": 0,
+        "recallSample": 0.6164772727272727,
+        "recallCode": 0.6164772727272727,
+        "reads": 441,
+        "falseReads": 4,
+        "falseReadRate": 0.009070294784580499,
+        "negativesFp": null,
+        "p50": 12.645079000008991,
+        "p95": 110.21923499999684,
+        "p99": 156.24965400001383,
+        "errors": 0
+      }
+    },
+    "quagga2": {
+      "defocus": {
+        "samples": 61,
+        "positives": 61,
+        "negatives": 0,
+        "recallSample": 0.29508196721311475,
+        "recallCode": 0.29508196721311475,
+        "reads": 27,
+        "falseReads": 3,
+        "falseReadRate": 0.1111111111111111,
+        "negativesFp": null,
+        "p50": 53.11268999999447,
+        "p95": 66.09011499999906,
+        "p99": 75.88227699999698,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 704,
+        "positives": 704,
+        "negatives": 0,
+        "recallSample": 0.43607954545454547,
+        "recallCode": 0.43607954545454547,
+        "reads": 347,
+        "falseReads": 6,
+        "falseReadRate": 0.01729106628242075,
+        "negativesFp": null,
+        "p50": 31.399709999997867,
+        "p95": 86.10767499999929,
+        "p99": 114.112337999999,
+        "errors": 0
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "engine": "qhago+ai",
+      "recall": {
+        "diff": -0.08104575163398693,
+        "lo": -0.12287104622871046,
+        "hi": -0.047156726768377254,
+        "n": 765,
+        "objects": 646,
+        "verdict": "peor"
+      },
+      "falseReads": {
+        "diff": 0,
+        "lo": 0,
+        "hi": 0,
+        "n": 620,
+        "objects": 543,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "defocus": {
+          "diff": -0.3442622950819672,
+          "lo": -0.5060240963855421,
+          "hi": 0,
+          "n": 61,
+          "objects": 5,
+          "verdict": "peor"
+        },
+        "normal": {
+          "diff": -0.05823863636363636,
+          "lo": -0.07591240875912408,
+          "hi": -0.041968162083936326,
+          "n": 704,
+          "objects": 643,
+          "verdict": "peor"
+        }
+      }
+    },
+    {
+      "engine": "zxing-wasm",
+      "recall": {
+        "diff": 0.0392156862745098,
+        "lo": 0.023809523809523808,
+        "hi": 0.055,
+        "n": 765,
+        "objects": 646,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0.00684931506849315,
+        "lo": -0.001763668430335097,
+        "hi": 0.016216216216216217,
+        "n": 584,
+        "objects": 510,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "defocus": {
+          "diff": 0.01639344262295082,
+          "lo": 0,
+          "hi": 0.0375,
+          "n": 61,
+          "objects": 5,
+          "verdict": "no peor"
+        },
+        "normal": {
+          "diff": 0.041193181818181816,
+          "lo": 0.02546916890080429,
+          "hi": 0.05830903790087463,
+          "n": 704,
+          "objects": 643,
+          "verdict": "mejor"
+        }
+      }
+    },
+    {
+      "engine": "zxing-js",
+      "recall": {
+        "diff": 0.20522875816993463,
+        "lo": 0.16887816646562123,
+        "hi": 0.24171270718232044,
+        "n": 765,
+        "objects": 646,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0.002188183807439825,
+        "lo": -0.009195402298850575,
+        "hi": 0.014018691588785047,
+        "n": 457,
+        "objects": 392,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "defocus": {
+          "diff": 0,
+          "lo": 0,
+          "hi": 0,
+          "n": 61,
+          "objects": 5,
+          "verdict": "no peor"
+        },
+        "normal": {
+          "diff": 0.22301136363636365,
+          "lo": 0.1908713692946058,
+          "hi": 0.256011315417256,
+          "n": 704,
+          "objects": 643,
+          "verdict": "mejor"
+        }
+      }
+    },
+    {
+      "engine": "quagga2",
+      "recall": {
+        "diff": 0.37777777777777777,
+        "lo": 0.3289315726290516,
+        "hi": 0.43070652173913043,
+        "n": 765,
+        "objects": 646,
+        "verdict": "mejor"
+      },
+      "falseReads": {
+        "diff": 0.011594202898550725,
+        "lo": -0.005952380952380952,
+        "hi": 0.029411764705882353,
+        "n": 345,
+        "objects": 298,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "defocus": {
+          "diff": 0.08196721311475409,
+          "lo": -0.0375,
+          "hi": 0.21686746987951808,
+          "n": 61,
+          "objects": 5,
+          "verdict": "peor"
+        },
+        "normal": {
+          "diff": 0.4034090909090909,
+          "lo": 0.3592644978783593,
+          "hi": 0.4468704512372635,
+          "n": 704,
+          "objects": 643,
+          "verdict": "mejor"
+        }
+      }
+    }
+  ]
+}

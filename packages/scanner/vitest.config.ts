@@ -49,7 +49,7 @@ export default defineConfig({
               ...(process.env.QHAGO_CAMERA_FIREFOX === "0"
                 ? []
                 : [{ browser: "firefox" as const }]),
-              // WebKit: mismo shim; requiere las dependencias del sistema de Playwright (libavif, etc.).
+              // WebKit: experimental. En Linux, play() sobre canvas.captureStream no arranca (limitación de Playwright).
               ...(process.env.QHAGO_CAMERA_WEBKIT === "1" ? [{ browser: "webkit" as const }] : []),
             ],
           },

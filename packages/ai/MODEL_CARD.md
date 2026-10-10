@@ -84,6 +84,25 @@ Con lite, Δ = +4,9 pp (IC 95 % bootstrap por objeto [+2,9; +7,3]), veredicto "m
 
 Informes: `bench/results/2026-10-10-lite-synthetic-test.md` (lite) y `2026-10-10-695c8e0-synthetic-test.md` (v1).
 
+### Fotos reales (2026-10-10, datasets públicos)
+
+Evaluación sin reentrenar (el modelo nunca vio fotos reales):
+
+- **Detector** en ArTe-Lab 1D extended (365 fotos de móvil con máscara, CC BY 3.0): mAP@0.5 = **0,94** (INT8
+  lite) / 0,96 (INT8 v1). El error de esquinas frente a la máscara (11 %) no es comparable: las máscaras cubren
+  solo las barras y el modelo predice el símbolo con su zona de silencio. Script: `training/eval/eval_real_masks.py`.
+- **Integración** en `bench/dataset/public`, split `test` (1 840 fotos EAN-13/EAN-8 de ArTe-Lab, KAIST y Muenster):
+
+| Motor | Recall | Desenfocadas (n=152) | Lecturas falsas |
+|---|---|---|---|
+| qhago | 76,9 % | 11,8 % | 18 (1,2 %) |
+| qhago + detector-v1-lite | **83,9 %** | **32,9 %** | 19 (1,2 %) |
+| zxing-wasm (referencia) | 71,4 % | 5,3 % | 22 (1,6 %) |
+
+Δ = +7,0 pp (IC 95 % [+5,5; +8,6]), "mejor", lecturas falsas iguales (Δ 0,0 pp). Informe:
+`bench/results/2026-10-10-fba9312-public-test.md`. Limitación: solo hay 1D (EAN) reales; sin 2D reales con licencia
+abierta de descarga directa (BarBeR requiere cuenta).
+
 ### Latencia en navegador
 
 Medido en Chrome 156 de escritorio (i9-12900H, con otras cargas en paralelo), ORT Web WASM con un hilo, de un frame
@@ -99,14 +118,15 @@ defecto) y solo en modo `fallback`.
 
 | Criterio | Resultado | |
 |---|---|---|
-| mAP@0.5 ≥ 0,85 en `dev-val` | 0,968 INT8, en validación **sintética** | ✔ con sintético; falta un `dev-val` real |
+| mAP@0.5 ≥ 0,85 en `dev-val` | 0,968 sintético; **0,94 en 365 fotos reales** (ArTe-Lab, solo 1D) | ✔ (1D); falta 2D real |
 | Error de esquinas ≤ 3 % | 4,5 % INT8 (3,4 % FP32) | ✘ |
-| Subconjunto adverso de `test`: +10 pp y "mejor" | +5,3 pp (78,1 % → 83,4 %), sintético | ✘ |
+| Subconjunto adverso de `test`: +10 pp y "mejor" | Sintético +5,3 pp. Real: +7,0 pp global, **+21,1 pp en desenfocadas** (las fotos públicas no traen las etiquetas small/perspective/curved/multi/damaged) | ✘ / sin medir exactamente |
 | `false_read_rate` igual o menor | Igual | ✔ |
 | Latencia p95 ≤ 60 ms (WASM) / 25 ms (WebGPU) en `android-mid` | 38-47 ms p50 en escritorio | ✘ previsible en móvil; sin medir en el dispositivo |
 | Sin `@qhago/ai`, no se descarga ORT ni modelos | `@qhago/scanner` no tiene dependencias | ✔ |
 
-**Decisión (2026-10-10): no publicar.** El paquete queda en el repo como experimental, con `"private": true`; hay
+**Decisión (2026-10-10, revisada con fotos reales): sigue sin publicarse**, pero la evidencia real es favorable
+(+7 pp sin lecturas falsas extra). Faltan: latencia en `android-mid`, 2D reales y el subconjunto adverso etiquetado. El paquete queda en el repo como experimental, con `"private": true`; hay
 que quitarlo cuando pase G5. Para reconsiderarlo hace falta:
 
 1. El dataset real de F1, con `dev-train` y `dev-val`.

@@ -7,7 +7,7 @@ rellenan en la ronda de cada RC en dispositivos reales (BrowserStack/LambdaTest 
 |---|---|---|---|---|---|---|
 | Chromium (Playwright, Linux) | build de Playwright 1.64 | ✔ | ✔ cámara falsa nativa | track-processor | automático (CI + local) | ✔ |
 | Firefox (Playwright, Linux) | build de Playwright 1.64 | ✔ | ✔ shim `captureStream` | frame-callback | automático (CI + local) | ✔ |
-| WebKit (Playwright, Linux) | build de Playwright 1.64 | CI | CI (shim) | frame-callback | automático (solo CI: en local falta `libavif16`) | pendiente de la primera ejecución de CI |
+| WebKit (Playwright, Linux) | build de Playwright 1.64 | ✔ (21 tests) | ✘ no simulable: `play()` sobre `canvas.captureStream` no arranca en WebKit/Linux | — | automático (`decode`, polyfill, host); cámara en Safari real (manual) | ✔ decode · cámara → matriz manual |
 | Node | 24.15 (local); 22.14 y 24 (CI) | ✔ | `UNSUPPORTED` (por diseño) | — | automático | ✔ 24 local; 22 en CI |
 | Bun | 1.3.12 | ✔ (snapshot ≡ Node en 571 samples) | `UNSUPPORTED` | — | automático | ✔ |
 | Chrome Android (gama alta / media / baja) | — | — | — | — | manual | pendiente |

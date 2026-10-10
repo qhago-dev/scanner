@@ -234,13 +234,22 @@ export class Scanner {
     v.setAttribute("muted", "");
     v.autoplay = true;
     v.srcObject = this.stream;
-    await v.play().catch((e) => {
-      throw new ScanError(
-        "UNSUPPORTED",
-        `No se pudo reproducir el vídeo de la cámara: ${String(e)}`,
-        { cause: e },
-      );
-    });
+    // play() puede no resolver nunca (motores sin soporte del stream): se acota para que start() no se cuelgue.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      v.play(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout de 10 s")), 10_000);
+      }),
+    ])
+      .catch((e) => {
+        throw new ScanError(
+          "UNSUPPORTED",
+          `No se pudo reproducir el vídeo de la cámara: ${String((e as Error)?.message ?? e)}`,
+          { cause: e },
+        );
+      })
+      .finally(() => clearTimeout(timer));
     if (!v.videoWidth)
       await new Promise((r) => v.addEventListener("loadedmetadata", r, { once: true }));
     this._video = v;

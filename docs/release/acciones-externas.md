@@ -47,3 +47,7 @@ Preparadas en F0.8; ninguna se ha ejecutado. Orden recomendado:
 
 ## 10. Entorno local (opcional)
 - [ ] `sudo apt-get install libavif16` para correr WebKit de Playwright en local (CI ya lo instala con `--with-deps`).
+
+## 11. Datos reales 2D (opcional)
+- [ ] Crear una cuenta en [BarBeR](https://ditto.ing.unimore.it/barber/) y descargar el dataset (8 748 imágenes 1D+2D
+      con polígono y valor). Hoy `bench/dataset/public` solo tiene 1D reales (ArTe-Lab, KAIST, Muenster).

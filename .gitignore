@@ -62,3 +62,6 @@ packages/scanner/e2e/vite-app/.vite-*/
 packages/scanner/test/**/__screenshots__/
 bench/dataset/public/raw/
 apps/demo/video/out/
+
+# Capturas de prueba en dispositivo (privadas)
+apps/demo/debug-captures/

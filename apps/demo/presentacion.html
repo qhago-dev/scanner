@@ -404,6 +404,11 @@ createScanner({ workerFactory: aiWorker, plugins: [aiDetector({ when: <span clas
             </div>
             <button type="button" id="cam" class="btn">📷 Abrir cámara</button>
             <pre id="cam-stats" class="small">—</pre>
+            <div id="dbg" class="cam-opts small" hidden>
+              <button type="button" id="snap" class="btn">📸 capturar</button>
+              <label><input id="auto-shot" type="checkbox" checked /> fotos automáticas si no lee</label>
+              <span id="dbg-n"></span>
+            </div>
             <div id="cam-slot"></div>
           </div>
         </div>

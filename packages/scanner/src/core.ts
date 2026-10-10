@@ -1,3 +1,4 @@
+import { dropConflicts } from "./conflicts";
 import type { Engine, Raster } from "./engine/engine";
 import { encodeOptions } from "./engine/options";
 import { ScanError, throwIfAborted } from "./errors";
@@ -70,9 +71,11 @@ export function readRaster(
     );
   }
   const requested = options.formats ?? DEFAULT_FORMATS;
-  const results = out.results
-    .filter((r) => passesValidation(r, options.validateChecksums))
-    .map((r) => normalizeUpc(r, requested));
+  const results = dropConflicts(
+    out.results
+      .filter((r) => passesValidation(r, options.validateChecksums))
+      .map((r) => normalizeUpc(r, requested)),
+  );
   return { results, candidates: out.candidates, passes: out.passes, ms: out.ms };
 }
 

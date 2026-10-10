@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "dataset": "public",
+    "split": "test",
+    "date": "2026-10-10",
+    "commit": "793ff50",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900H",
+    "runtime": "Bun 1.3.12",
+    "reason": "regla de conflictos 1D + barrido en rebanadas (prueba Android)"
+  },
+  "engines": [
+    {
+      "name": "qhago",
+      "version": "0.0.0",
+      "notes": "strategy balanced, los 13 formatos, validateChecksums por defecto"
+    },
+    {
+      "name": "qhago+ai",
+      "version": "0.0.0",
+      "notes": "qhago balanced + detector detector.int8.onnx (fallback, umbral 0.4, máx. 5 regiones)"
+    }
+  ],
+  "global": {
+    "qhago": {
+      "samples": 1840,
+      "positives": 1840,
+      "negatives": 0,
+      "recallSample": 0.7646739130434783,
+      "recallCode": 0.7646739130434783,
+      "reads": 1424,
+      "falseReads": 7,
+      "falseReadRate": 0.0049157303370786515,
+      "negativesFp": null,
+      "p50": 10.434382999985246,
+      "p95": 165.28388199999972,
+      "p99": 533.216333999997,
+      "errors": 0
+    },
+    "qhago+ai": {
+      "samples": 1840,
+      "positives": 1840,
+      "negatives": 0,
+      "recallSample": 0.8385869565217391,
+      "recallCode": 0.8385869565217391,
+      "reads": 1563,
+      "falseReads": 9,
+      "falseReadRate": 0.005758157389635317,
+      "negativesFp": null,
+      "p50": 12.224477999989176,
+      "p95": 313.6118359999964,
+      "p99": 560.9313459999976,
+      "errors": 0
+    }
+  },
+  "byScenario": {
+    "qhago": {
+      "defocus": {
+        "samples": 152,
+        "positives": 152,
+        "negatives": 0,
+        "recallSample": 0.11842105263157894,
+        "recallCode": 0.11842105263157894,
+        "reads": 19,
+        "falseReads": 0,
+        "falseReadRate": 0,
+        "negativesFp": null,
+        "p50": 71.58377899999323,
+        "p95": 162.87239299999783,
+        "p99": 176.85788599999796,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 1688,
+        "positives": 1688,
+        "negatives": 0,
+        "recallSample": 0.8228672985781991,
+        "recallCode": 0.8228672985781991,
+        "reads": 1405,
+        "falseReads": 7,
+        "falseReadRate": 0.00498220640569395,
+        "negativesFp": null,
+        "p50": 9.297571999981301,
+        "p95": 182.96889999997802,
+        "p99": 538.2575209999995,
+        "errors": 0
+      }
+    },
+    "qhago+ai": {
+      "defocus": {
+        "samples": 152,
+        "positives": 152,
+        "negatives": 0,
+        "recallSample": 0.32894736842105265,
+        "recallCode": 0.32894736842105265,
+        "reads": 52,
+        "falseReads": 0,
+        "falseReadRate": 0,
+        "negativesFp": null,
+        "p50": 168.53507199999876,
+        "p95": 303.122555000009,
+        "p99": 440.3390070000023,
+        "errors": 0
+      },
+      "normal": {
+        "samples": 1688,
+        "positives": 1688,
+        "negatives": 0,
+        "recallSample": 0.884478672985782,
+        "recallCode": 0.884478672985782,
+        "reads": 1511,
+        "falseReads": 9,
+        "falseReadRate": 0.005956320317670417,
+        "negativesFp": null,
+        "p50": 10.771651999995811,
+        "p95": 328.5656279999821,
+        "p99": 570.9074079999991,
+        "errors": 0
+      }
+    }
+  },
+  "comparisons": [
+    {
+      "engine": "qhago+ai",
+      "recall": {
+        "diff": -0.07391304347826087,
+        "lo": -0.09086078639744952,
+        "hi": -0.0591990713871155,
+        "n": 1840,
+        "objects": 1503,
+        "verdict": "peor"
+      },
+      "falseReads": {
+        "diff": 0,
+        "lo": 0,
+        "hi": 0,
+        "n": 1419,
+        "objects": 1231,
+        "verdict": "no peor"
+      },
+      "perScenario": {
+        "defocus": {
+          "diff": -0.21052631578947367,
+          "lo": -0.3333333333333333,
+          "hi": -0.10655737704918032,
+          "n": 152,
+          "objects": 22,
+          "verdict": "peor"
+        },
+        "normal": {
+          "diff": -0.061611374407582936,
+          "lo": -0.07340553549939831,
+          "hi": -0.049487024743512374,
+          "n": 1688,
+          "objects": 1490,
+          "verdict": "peor"
+        }
+      }
+    }
+  ]
+}

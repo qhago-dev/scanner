@@ -26,10 +26,12 @@ Detalle: `2026-10-10-a65c643-*.md`. Umbrales de G2/G3/G5: se fijan con el datase
 
 | Motor | Recall | Lecturas falsas |
 |---|---|---|
-| qhago | 76,9 % | 1,2 % |
-| qhago + detector IA | 83,9 % | 1,2 % |
+| qhago | 76,5 % | 0,5 % |
+| qhago + detector IA | 83,9 % | 0,6 % |
 | zxing-wasm | 71,4 % | 1,6 % |
 | zxing-js | 57,6 % | 1,0 % |
 | Quagga2 | 42,9 % | 4,1 % |
 
 qhago − zxing-wasm = +5,5 pp (IC 95 % [4,4; 6,7]), "mejor". Informe: `2026-10-10-fba9312-public-test.md`.
+Con la regla de conflictos 1D (`src/conflicts.ts`): qhago 76,9 → 76,5 % y lecturas falsas 18 → 7; con IA 83,9 %
+igual y 19 → 9. Informe: `2026-10-10-793ff50-conflicts-public-test.md`.

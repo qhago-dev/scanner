@@ -95,12 +95,14 @@ Evaluación sin reentrenar (el modelo nunca vio fotos reales):
 
 | Motor | Recall | Desenfocadas (n=152) | Lecturas falsas |
 |---|---|---|---|
-| qhago | 76,9 % | 11,8 % | 18 (1,2 %) |
-| qhago + detector-v1-lite | **83,9 %** | **32,9 %** | 19 (1,2 %) |
+| qhago | 76,5 % | 11,8 % | 7 (0,5 %) |
+| qhago + detector-v1-lite | **83,9 %** | **32,9 %** | 9 (0,6 %) |
 | zxing-wasm (referencia) | 71,4 % | 5,3 % | 22 (1,6 %) |
 
 Δ = +7,0 pp (IC 95 % [+5,5; +8,6]), "mejor", lecturas falsas iguales (Δ 0,0 pp). Informe:
-`bench/results/2026-10-10-fba9312-public-test.md`. Limitación: solo hay 1D (EAN) reales; sin 2D reales con licencia
+`bench/results/2026-10-10-fba9312-public-test.md`. Con la regla de conflictos 1D de `@qhago/scanner` (descarta
+lecturas lineales contradictorias sobre el mismo símbolo) las falsas bajan a 7 y 9 sin cambiar el recall con IA:
+`bench/results/2026-10-10-793ff50-conflicts-public-test.md`. Limitación: solo hay 1D (EAN) reales; sin 2D reales con licencia
 abierta de descarga directa (BarBeR requiere cuenta).
 
 ### Latencia en navegador

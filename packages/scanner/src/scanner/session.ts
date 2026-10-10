@@ -53,6 +53,12 @@ const SWEEP_PATTERN = [0, 1, 0, 2] as const;
  * c·(1/SWEEP_DUTY − 1) ms antes de la siguiente (solo frena las rebanadas caras en equipos lentos).
  */
 export const SWEEP_DUTY = 0.5;
+/**
+ * La rebanada multiescala (la cara: ~500 ms en un Android de gama media, ~50 ms en escritorio) tiene su
+ * propio límite: como mucho el 10 % del tiempo. Si aún no toca, se ejecuta la barata en su lugar.
+ */
+export const HEAVY_DUTY = 0.1;
+const HEAVY = 2;
 
 function scalePoint(p: Point, sx: number, sy: number): Point {
   return { x: p.x * sx, y: p.y * sy };
@@ -65,6 +71,7 @@ export class ScannerSession {
   private sweepIndex = 0;
   /** Momento (ts del frame) a partir del cual se permite el siguiente barrido. */
   private nextSweepAt = -Infinity;
+  private nextHeavyAt = -Infinity;
   private reported = new Set<number>();
   private framesWithoutRead = 0;
   private plugins: Promise<ScannerPlugin[]> | null = null;
@@ -109,6 +116,7 @@ export class ScannerSession {
     this.reported.clear();
     this.emptyFrames = 0;
     this.nextSweepAt = -Infinity;
+    this.nextHeavyAt = -Infinity;
   }
 
   async process(input: ImageInput, meta: FrameMeta): Promise<{ ms: number; passes: string[] }> {
@@ -185,11 +193,15 @@ export class ScannerSession {
     if (nothing && this.emptyFrames >= this.opts.escalateAfterFrames && now >= this.nextSweepAt) {
       const i = this.sweepIndex++;
       const zone = SWEEP_ZONES[i % SWEEP_ZONES.length] as Rect;
-      const slice = SWEEP_SLICES[SWEEP_PATTERN[i % SWEEP_PATTERN.length] as number];
+      let k = SWEEP_PATTERN[i % SWEEP_PATTERN.length] as number;
+      if (k === HEAVY && now < this.nextHeavyAt) k = 0;
+      const slice = SWEEP_SLICES[k];
       const region = this.intersect(this.toPx(zone, raster), roi);
       const ts0 = performance.now();
       const r = region && this.safeRead(read, region, "thorough", slice);
-      this.nextSweepAt = now + (performance.now() - ts0) * (1 / SWEEP_DUTY - 1);
+      const cost = performance.now() - ts0;
+      this.nextSweepAt = now + cost * (1 / SWEEP_DUTY - 1);
+      if (k === HEAVY) this.nextHeavyAt = now + cost * (1 / HEAVY_DUTY - 1);
       if (r?.results.length) {
         this.trackAndVote(r.results, now, sx, sy);
         readAny = true;

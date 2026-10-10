@@ -21,3 +21,12 @@ test ×1 mejora en 6, empeora en 1. Diferencias de lectura: dev ×1 −1 vídeo 
 el barrido completo); dev ×10 −1 / +2. Con ×10 las medidas son ruidosas (×10 amplifica el jitter).
 
 Pendiente: confirmar en el dispositivo real (mismo Android) con el modo depuración.
+
+## Segunda prueba en el Android (con rebanadas) y ajustes
+
+Frames con escalado: p50 665 → 135 ms. Por rebanada en el teléfono: CLAHE ~130 ms, unsharp+recortes ~110 ms,
+multiescala ~500 ms → la multiescala pasa a tener su propio límite (`HEAVY_DUTY` = 10 % del tiempo).
+Vídeo dev: ×1 79,2 % (igual), ×10 77,4 % (base 75,5 %), p95 2 490 ms (base 2 630).
+
+La foto `0019-miss` (7750670011839, borrosa) devolvía con balanced/thorough **dos EAN-13 falsos con checksum
+válido** (9238472016651, 3716652077839) → regla de conflictos 1D (`src/conflicts.ts`).

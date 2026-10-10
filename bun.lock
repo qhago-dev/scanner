@@ -13,7 +13,9 @@
     "apps/demo": {
       "name": "qhago-demo",
       "dependencies": {
+        "@qhago/ai": "workspace:*",
         "@qhago/scanner": "workspace:*",
+        "onnxruntime-web": "^1.30.0",
         "zxing-wasm": "^3.1.5",
       },
       "devDependencies": {

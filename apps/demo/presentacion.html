@@ -390,7 +390,20 @@ createScanner({ workerFactory: aiWorker, plugins: [aiDetector({ when: <span clas
             <pre id="out" class="small" aria-live="polite">—</pre>
           </div>
           <div>
+            <div class="cam-opts small">
+              <label>IA
+                <select id="ai"><option value="off" selected>sin IA</option><option value="fallback">IA si falla</option><option value="always">IA siempre</option></select>
+              </label>
+              <label>enfoque
+                <select id="focus"><option value="continuous" selected>continuo</option><option value="single-shot">un disparo</option><option value="manual">manual</option><option value="device">el del equipo</option></select>
+              </label>
+              <label>resolución
+                <select id="res"><option value="1280x720" selected>720p</option><option value="1920x1080">1080p</option></select>
+              </label>
+              <label id="dist-wrap" hidden>distancia <input id="dist" type="range" /></label>
+            </div>
             <button type="button" id="cam" class="btn">📷 Abrir cámara</button>
+            <pre id="cam-stats" class="small">—</pre>
             <div id="cam-slot"></div>
           </div>
         </div>

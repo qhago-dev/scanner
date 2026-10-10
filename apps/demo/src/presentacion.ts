@@ -1,5 +1,6 @@
 // Presentación: navegación por teclado/táctil + diapositiva en vivo con la librería real.
 import { type DecodeStrategy, decode } from "@qhago/scanner";
+import type { QhagoScannerElement } from "@qhago/scanner/ui";
 
 const slides = [...document.querySelectorAll<HTMLElement>("#deck > section")];
 const progress = document.getElementById("progress") as HTMLElement;
@@ -104,12 +105,51 @@ drop.addEventListener("drop", (e) => {
   if (f) void run(f);
 });
 
-document.getElementById("cam")?.addEventListener("click", async () => {
-  const slot = document.getElementById("cam-slot") as HTMLElement;
-  if (slot.firstElementChild) {
-    slot.replaceChildren();
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const camStats = $<HTMLElement>("cam-stats");
+const distWrap = $<HTMLElement>("dist-wrap");
+const dist = $<HTMLInputElement>("dist");
+type FocusCaps = MediaTrackCapabilities & {
+  focusMode?: string[];
+  focusDistance?: { min: number; max: number; step?: number };
+};
+
+function camTrack(el: QhagoScannerElement): MediaStreamTrack | undefined {
+  return (el.scanner?.video?.srcObject as MediaStream | null)?.getVideoTracks()[0];
+}
+
+/** Aplica el modo de enfoque elegido (el scanner pone "continuous" al arrancar si existe). */
+async function applyFocus(el: QhagoScannerElement): Promise<void> {
+  const track = camTrack(el);
+  const mode = $<HTMLSelectElement>("focus").value;
+  if (!track || mode === "device") return;
+  const caps = (track.getCapabilities?.() ?? {}) as FocusCaps;
+  const fd = caps.focusDistance;
+  distWrap.hidden = mode !== "manual" || !fd;
+  if (!caps.focusMode?.includes(mode)) {
+    camStats.textContent = `enfoque "${mode}" no soportado (modos: ${caps.focusMode?.join(", ") || "ninguno"})`;
     return;
   }
+  const c: Record<string, unknown> = { focusMode: mode };
+  if (mode === "manual" && fd) {
+    Object.assign(dist, { min: fd.min, max: fd.max, step: fd.step ?? 0.01 });
+    if (!dist.dataset.init) {
+      dist.value = String(fd.min + (fd.max - fd.min) * 0.1);
+      dist.dataset.init = "1";
+    }
+    c.focusDistance = Number(dist.value);
+  }
+  await track.applyConstraints({ advanced: [c] } as MediaTrackConstraints).catch((e) => {
+    camStats.textContent = `no se pudo aplicar el enfoque: ${(e as Error).message}`;
+  });
+}
+
+let camEl: QhagoScannerElement | null = null;
+
+async function openCam(): Promise<void> {
+  const slot = $<HTMLElement>("cam-slot");
+  const ai = $<HTMLSelectElement>("ai").value;
+  const [w, h] = $<HTMLSelectElement>("res").value.split("x").map(Number) as [number, number];
   await import("@qhago/scanner/ui");
   const el = document.createElement("qhago-scanner");
   el.setAttribute("formats", "ean_13,ean_8,upc_a,code_128,qr_code,data_matrix");
@@ -117,9 +157,71 @@ document.getElementById("cam")?.addEventListener("click", async () => {
   el.setAttribute("switch-camera-button", "");
   el.setAttribute("beep", "");
   el.setAttribute("lang", "es");
+  el.options = { camera: { resolution: [w, h] }, frameStats: true };
+  if (ai !== "off") {
+    camStats.textContent = "cargando IA…";
+    const { aiDetector, aiWorker } = await import("@qhago/ai");
+    el.options = {
+      ...el.options,
+      workerFactory: aiWorker,
+      plugins: [aiDetector({ when: ai as "fallback" | "always" })],
+    };
+  }
+  let t0 = performance.now();
+  let fps = 0;
+  let ms = 0;
+  let passes: readonly string[] = [];
+  let last = "";
+  const render = () => {
+    const track = el.isConnected ? camTrack(el) : undefined;
+    const st = track?.getSettings() as (MediaTrackSettings & { focusMode?: string }) | undefined;
+    camStats.textContent =
+      `${st ? `${st.width}×${st.height} · enfoque ${st.focusMode ?? "?"}` : "…"} · IA ${ai}\n` +
+      `${fps.toFixed(1)} fps · ${ms.toFixed(0)} ms/frame · ${passes.join(" ") || "—"}` +
+      (last ? `\n${last}` : "");
+  };
+  el.addEventListener("statechange", (ev) => {
+    if ((ev as CustomEvent<string>).detail !== "scanning") return;
+    t0 = performance.now();
+    void applyFocus(el).then(() => {
+      const sc = el.scanner;
+      sc?.on("frame", (f) => {
+        fps = f.fps;
+        ms = f.ms;
+        passes = f.passes;
+        render();
+      });
+      render();
+    });
+  });
   el.addEventListener("detect", (ev) => {
     const r = (ev as CustomEvent<{ format: string; text: string }>).detail;
+    last = `detectado en ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    t0 = performance.now();
     out.textContent = `cámara → ${r.format}  ${r.text}`;
+    render();
   });
-  slot.append(el);
+  slot.replaceChildren(el);
+  camEl = el;
+}
+
+function closeCam(): void {
+  $<HTMLElement>("cam-slot").replaceChildren();
+  camEl = null;
+  distWrap.hidden = true;
+}
+
+$<HTMLButtonElement>("cam").addEventListener("click", () => {
+  if (camEl) closeCam();
+  else void openCam();
 });
+// Cambiar IA o resolución reabre la cámara; el enfoque se aplica en caliente.
+for (const id of ["ai", "res"])
+  $<HTMLSelectElement>(id).addEventListener("change", () => {
+    if (camEl) {
+      closeCam();
+      void openCam();
+    }
+  });
+$<HTMLSelectElement>("focus").addEventListener("change", () => camEl && void applyFocus(camEl));
+dist.addEventListener("input", () => camEl && void applyFocus(camEl));

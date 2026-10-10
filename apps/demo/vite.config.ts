@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   // ADR-06: en modo dev, el pre-bundling reubica el paquete y rompe new URL(…, import.meta.url).
-  optimizeDeps: { exclude: ["@qhago/scanner"] },
+  optimizeDeps: { exclude: ["@qhago/scanner", "@qhago/ai", "onnxruntime-web"] },
   worker: { format: "es" },
   build: {
     target: "es2022",

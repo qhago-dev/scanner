@@ -1,6 +1,6 @@
 import { isBarcodeFormat } from "../formats";
 import { mapToElement } from "../geometry";
-import { createScanner, type Scanner } from "../scanner/scanner";
+import { createScanner, type Scanner, type ScannerOptions } from "../scanner/scanner";
 import type { ScannerState, TrackedResult } from "../scanner/types";
 import type { BarcodeFormat, Point, Rect } from "../types";
 
@@ -80,6 +80,8 @@ export class QhagoScannerElement extends Base {
 
   /** Textos de los botones/estado; por defecto según `lang` (es/en). */
   labels: Partial<QhagoScannerLabels> = {};
+  /** Opciones extra de `createScanner` (p. ej. `workerFactory`/`plugins` de @qhago/ai, `camera`, `maxFps`). Se aplican en el próximo `start()`. */
+  options: Omit<ScannerOptions, "video" | "formats" | "roi"> = {};
   private _scanner: Scanner | null = null;
   private root!: ShadowRoot;
   private video!: HTMLVideoElement;
@@ -143,7 +145,12 @@ export class QhagoScannerElement extends Base {
       this._scanner.resume();
       return;
     }
-    const s = createScanner({ video: this.video, formats: this.formats(), roi: this.roi() });
+    const s = createScanner({
+      ...this.options,
+      video: this.video,
+      formats: this.formats(),
+      roi: this.roi(),
+    });
     this._scanner = s;
     s.on("detect", (e) => this.onDetect(e.result));
     s.on("track", (e) => this.upsert(e.result, true));

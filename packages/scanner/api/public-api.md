@@ -669,6 +669,7 @@ const LABELS: Record<"es" | "en", QhagoScannerLabels>;
 export class QhagoScannerElement extends Base {
     static observedAttributes: string[];
     labels: Partial<QhagoScannerLabels>;
+    options: Omit<ScannerOptions, "video" | "formats" | "roi">;
     get scanner(): Scanner | null;
     connectedCallback(): void;
     disconnectedCallback(): void;

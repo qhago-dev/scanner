@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# Genera el vídeo narrado de la presentación: TTS local (Piper) + capturas (Playwright) + montaje (ffmpeg).
-# Requisitos: ffmpeg con libass, `pip install --target <dir> piper-tts` y una voz de rhasspy/piper-voices.
-#   PIPER=<dir> VOICE=<voz.onnx> bash apps/demo/video/make.sh
+# Vídeo narrado de la presentación: TTS local (Kokoro-82M por defecto, o Piper) + capturas (Playwright) + montaje
+# (ffmpeg con libass). Sin servicios externos.
+#   KOKORO=<dir pip --target con kokoro> bash apps/demo/video/make.sh          # voz ef_dora, es-419
+#   ENGINE=piper PIPER=<dir> VOICE=<voz.onnx> bash apps/demo/video/make.sh
+# Kokoro importa spaCy solo para inglés: si no está instalado, pon en PYTHONPATH un stub `spacy.py`.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-: "${PIPER:?ruta de piper-tts (pip --target)}"
-: "${VOICE:?ruta de la voz .onnx (p. ej. es_MX-claude-high.onnx)}"
-PYTHONPATH="$PIPER" python3 "$HERE/tts.py" --voice "$VOICE" --speed "${SPEED:-1.05}"
+if [[ "${ENGINE:-kokoro}" == kokoro ]]; then
+  : "${KOKORO:?ruta de kokoro (pip --target)}"
+  PYTHONPATH="$KOKORO${STUBS:+:$STUBS}" python3 "$HERE/tts.py" --voice "${VOICE:-ef_dora}" --speed "${SPEED:-0.95}"
+else
+  : "${PIPER:?ruta de piper-tts}" "${VOICE:?voz .onnx}"
+  PYTHONPATH="$PIPER" python3 "$HERE/tts.py" --engine piper --voice "$VOICE" --speed "${SPEED:-0.95}"
+fi
 cd "$HERE/.." && bunx vite build >/dev/null
 bunx vite preview --port 4719 --strictPort >/dev/null 2>&1 &
 PREVIEW=$!

@@ -1,7 +1,8 @@
 // Interfaz de plugins del worker (F5.6). Un plugin propone cuadriláteros donde puede haber un código; el motor
 // los rectifica (sa_read_quad) y los lee. Los descriptores (ScannerPluginDescriptor) cruzan desde el main thread;
 // las implementaciones viven en el worker que los registra con startWorkerHost({ plugins }).
-import { readRaster } from "./core";
+import { contradicts, dropConflicts, verifyHarder } from "./conflicts";
+import { readRaster, rereadNormal } from "./core";
 import type { Engine, EngineOutput, Raster } from "./engine/engine";
 import { encodeOptions } from "./engine/options";
 import { ScanError } from "./errors";
@@ -165,7 +166,15 @@ export function readProposals(
       out.push(res);
     }
   }
-  return out;
+  // Lo leído en una región rectificada no tiene el respaldo de la cascada: se verifica siempre como "harder"
+  // (relectura normal de la zona en la imagen) y se descartan las lecturas 1D contradictorias.
+  const verified = verifyHarder(
+    out,
+    out.map(() => "plugin"),
+    raster,
+    (region) => rereadNormal(engine, raster, region, requested, o.validateChecksums),
+  );
+  return dropConflicts(verified);
 }
 
 /** decode() con plugins: si la cascada no lee, cada plugin propone regiones. */
@@ -180,8 +189,12 @@ export async function decodeWithPlugins(
     const plugin = await pp;
     if (base.results.length && plugin.when !== "always") continue;
     const props = await plugin.onFrame(raster, { framesWithoutRead: 0, source: "image" });
+    // Lo que ya leyó la cascada manda: se descartan duplicados y lecturas que la contradicen.
     const extra = readProposals(engine, raster, props, o).filter(
-      (x) => !base.results.some((b) => b.format === x.format && b.text === x.text),
+      (x) =>
+        !base.results.some(
+          (b) => (b.format === x.format && b.text === x.text) || contradicts(b, x),
+        ),
     );
     base.results.push(...extra);
     if (extra.length) base.passes.push(`plugin:${plugin.name}`);

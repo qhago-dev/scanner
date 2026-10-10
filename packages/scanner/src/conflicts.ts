@@ -58,6 +58,16 @@ export function dropConflicts(results: BarcodeResult[]): BarcodeResult[] {
   return results.filter((_, i) => keep.has(i));
 }
 
+/** ¿`b` contradice a `a` (ambos 1D, distinto contenido, mismo símbolo)? */
+export function contradicts(a: BarcodeResult, b: BarcodeResult): boolean {
+  return (
+    isLinear(a.format) &&
+    isLinear(b.format) &&
+    a.text !== b.text &&
+    sameSymbol(a.cornerPoints, b.cornerPoints)
+  );
+}
+
 /** Eje de lectura de un quad 1D: centro, dirección unitaria, longitud (lado largo) y grosor (lado corto). */
 function axis(q: readonly Point[]) {
   const [p0, p1, p2, p3] = q as [Point, Point, Point, Point];

@@ -6,7 +6,7 @@ import { DEFAULT_FORMATS, isBarcodeFormat } from "./formats";
 import { normalizeUpc } from "./gtin";
 import { checkPixels, type ImageInput } from "./input/common";
 import { decodeWithPlugins, missingPluginError, type PluginRegistry } from "./plugins";
-import type { BarcodeResult, DecodeOptions, DecodeWithErrors } from "./types";
+import type { BarcodeFormat, BarcodeResult, DecodeOptions, DecodeWithErrors } from "./types";
 import { passesValidation } from "./validate";
 
 export interface Platform {
@@ -80,20 +80,30 @@ export function readRaster(
   let results = out.results.filter((_, i) => ok[i]).map((r) => normalizeUpc(r, requested));
   if (!options.noVerify) {
     const passes = out.resultPasses.filter((_, i) => ok[i]);
-    results = verifyHarder(results, passes, raster, (region) => {
-      const v = readRaster(engine, raster, {
-        formats: requested.filter((f) => ["ean_13", "ean_8", "upc_a", "upc_e"].includes(f)),
-        strategy: "thorough",
-        region,
-        validateChecksums: options.validateChecksums,
-        advanced: { tryHarder: false, tryInvert: false, preprocess: { multiscale: true } },
-        noVerify: true,
-      });
-      return v.results;
-    });
+    results = verifyHarder(results, passes, raster, (region) =>
+      rereadNormal(engine, raster, region, requested, options.validateChecksums),
+    );
   }
   results = dropConflicts(results);
   return { results, candidates: out.candidates, passes: out.passes, ms: out.ms };
+}
+
+/** Relectura sin "harder" (x1, x2, x0,5) de una región, solo EAN/UPC: base de `verifyHarder`. */
+export function rereadNormal(
+  engine: Engine,
+  raster: Raster,
+  region: { x: number; y: number; width: number; height: number },
+  requested: readonly BarcodeFormat[],
+  validateChecksums: DecodeOptions["validateChecksums"],
+): BarcodeResult[] {
+  return readRaster(engine, raster, {
+    formats: requested.filter((f) => ["ean_13", "ean_8", "upc_a", "upc_e"].includes(f)),
+    strategy: "thorough",
+    region,
+    validateChecksums,
+    advanced: { tryHarder: false, tryInvert: false, preprocess: { multiscale: true } },
+    noVerify: true,
+  }).results;
 }
 
 /** decode() en el hilo actual. */

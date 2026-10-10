@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropConflicts, verifyHarder } from "../../src/conflicts";
+import { contradicts, dropConflicts, verifyHarder } from "../../src/conflicts";
 import type { BarcodeFormat, BarcodeResult } from "../../src/types";
 
 /** Resultado con quad horizontal de x0 a x1 a la altura y (alto 9 px, como devuelve ZXing en 1D). */
@@ -95,5 +95,17 @@ describe("verifyHarder", () => {
     };
     verifyHarder([res("2548033204265"), res("ABC", "code_128")], ["fast", "harder"], size, reread);
     expect(calls).toBe(0);
+  });
+});
+
+describe("contradicts (lecturas del plugin frente a la cascada)", () => {
+  it("misma zona, distinto número → contradice; mismo número o 2D → no", () => {
+    expect(contradicts(r("7750670011839", 256, 470, 548), r("3756654017839", 256, 470, 560))).toBe(
+      true,
+    );
+    expect(contradicts(r("7750670011839", 256, 470, 548), r("7750670011839", 256, 470, 560))).toBe(
+      false,
+    );
+    expect(contradicts(r("A", 0, 200, 100, "qr_code"), r("B", 0, 200, 110))).toBe(false);
   });
 });

@@ -5,8 +5,8 @@ import { type ImageInput, isImageDataLike, isRawImage } from "../input/common";
 import type { BarcodeResult, DecodeWithErrors } from "../types";
 import type { FromWorker, ToWorker, WireOptions } from "./protocol";
 
-let worker: Worker | null = null;
-let ready: Promise<Worker> | null = null;
+// Un worker por fábrica (undefined = el de la config global / interno).
+const workers = new Map<(() => Worker) | undefined, Promise<Worker>>();
 let nextId = 1;
 const pending = new Map<
   number,
@@ -48,7 +48,13 @@ export async function createReadyWorker(
   await new Promise<void>((resolve, reject) => {
     const onError = (ev: ErrorEvent) => {
       w.terminate();
-      reject(new ScanError("ENGINE_LOAD_FAILED", `No se pudo iniciar el worker: ${ev.message}`));
+      reject(
+        new ScanError(
+          "ENGINE_LOAD_FAILED",
+          `No se pudo iniciar el worker: ${ev.message || "error de carga"}. Si hay CSP, permite worker-src 'self' blob:; ` +
+            "si el paquete viene de un CDN, configura workerUrl o usa worker: false.",
+        ),
+      );
     };
     w.addEventListener("error", onError, { once: true });
     w.onmessage = (e: MessageEvent<FromWorker>) => {
@@ -64,23 +70,21 @@ export async function createReadyWorker(
   return w;
 }
 
-function spawn(): Promise<Worker> {
-  ready ??= createReadyWorker((m) => {
+function spawn(factory?: () => Worker): Promise<Worker> {
+  const cached = workers.get(factory);
+  if (cached) return cached;
+  const ready = createReadyWorker((m) => {
     if (m.t !== "result" && m.t !== "error") return; // el worker de decode() no abre sesiones
     const p = pending.get(m.id);
     if (!p) return;
     pending.delete(m.id);
     if (m.t === "result") p.resolve(m.value);
     else p.reject(new ScanError(m.code, m.message));
-  })
-    .then((w) => {
-      worker = w;
-      return w;
-    })
-    .catch((e) => {
-      ready = null;
-      throw e;
-    });
+  }, factory).catch((e) => {
+    workers.delete(factory);
+    throw e;
+  });
+  workers.set(factory, ready);
   return ready;
 }
 
@@ -115,8 +119,9 @@ export async function decodeInWorker(
   input: ImageInput,
   options: WireOptions,
   signal?: AbortSignal,
+  factory?: () => Worker,
 ): Promise<BarcodeResult[] | DecodeWithErrors> {
-  const w = await spawn();
+  const w = await spawn(factory);
   const [wire, transfer] = await toWire(input);
   const id = nextId++;
   return new Promise((resolve, reject) => {
@@ -137,7 +142,10 @@ export function warmWorker(): Promise<unknown> {
 
 /** Solo tests. */
 export function terminateWorker(): void {
-  worker?.terminate();
-  worker = null;
-  ready = null;
+  for (const r of workers.values())
+    r.then(
+      (w) => w.terminate(),
+      () => {},
+    );
+  workers.clear();
 }

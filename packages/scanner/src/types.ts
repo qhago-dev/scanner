@@ -89,6 +89,24 @@ export interface DecodeOptions {
   engine?: DecodeEngine;
   signal?: AbortSignal;
   advanced?: Partial<AdvancedDecodeOptions>;
+  /** Worker propio para esta llamada (p. ej. `aiWorker` de @qhago/ai). Default: `configure({ workerFactory })`. */
+  workerFactory?: () => Worker;
+  /**
+   * Plugins que el worker aplica cuando la cascada no lee nada (p. ej. `aiDetector()` de @qhago/ai).
+   * Requieren un worker que los registre (`workerFactory`); sin él se ignoran con un warning.
+   */
+  plugins?: readonly ScannerPluginDescriptor[];
+}
+
+/**
+ * Descriptor serializable de un plugin: viaja al worker, que lo resuelve por `name` en su registro
+ * (`startWorkerHost({ plugins })`). Interfaz estable desde 1.0; no hay plugins oficiales hasta @qhago/ai.
+ */
+export interface ScannerPluginDescriptor {
+  name: string;
+  /** Versión de la interfaz de plugins que espera el descriptor. */
+  apiVersion: 1;
+  options?: Record<string, string | number | boolean | null>;
 }
 
 export interface DecodeWithErrors {

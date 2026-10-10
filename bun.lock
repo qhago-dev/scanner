@@ -21,6 +21,15 @@
         "vite": "^7.1.0",
       },
     },
+    "apps/examples/quagga-migration": {
+      "name": "qhago-example-quagga-migration",
+      "dependencies": {
+        "@qhago/scanner": "workspace:*",
+      },
+      "devDependencies": {
+        "vite": "^7.1.0",
+      },
+    },
     "bench": {
       "name": "@qhago/bench",
       "dependencies": {
@@ -632,6 +641,8 @@
     "pretty-format": ["pretty-format@27.5.1", "", { "dependencies": { "ansi-regex": "^5.0.1", "ansi-styles": "^5.0.0", "react-is": "^17.0.1" } }, "sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ=="],
 
     "qhago-demo": ["qhago-demo@workspace:apps/demo"],
+
+    "qhago-example-quagga-migration": ["qhago-example-quagga-migration@workspace:apps/examples/quagga-migration"],
 
     "quansync": ["quansync@0.2.11", "", {}, "sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA=="],
 

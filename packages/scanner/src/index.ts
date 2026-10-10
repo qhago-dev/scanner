@@ -52,8 +52,8 @@ export async function decode(
     if (useNative) return decodeNative(input, options);
   }
   if (options.worker !== false && canUseWorker()) {
-    const { signal, ...wire } = options;
-    return decodeInWorker(input, wire, signal);
+    const { signal, workerFactory, ...wire } = options;
+    return decodeInWorker(input, wire, signal, workerFactory);
   }
   return decodeInline(browserPlatform, input, options);
 }

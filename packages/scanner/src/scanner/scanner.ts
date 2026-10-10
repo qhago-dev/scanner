@@ -2,7 +2,7 @@
 import { ScanError, throwIfAborted } from "../errors";
 import { DEFAULT_FORMATS, isBarcodeFormat } from "../formats";
 import { browserPlatform } from "../platform-browser";
-import type { BarcodeFormat, DecodeStrategy, Rect } from "../types";
+import type { BarcodeFormat, DecodeStrategy, Rect, ScannerPluginDescriptor } from "../types";
 import { canUseWorker, createReadyWorker } from "../worker/client";
 import type { FromWorker, ToWorker } from "../worker/protocol";
 import {
@@ -57,6 +57,8 @@ export interface ScannerOptions {
   route?: "auto" | "track-processor" | "frame-callback" | "inline";
   /** Fábrica de workers (p. ej. aiWorker de @qhago/ai). */
   workerFactory?: () => Worker;
+  /** Plugins del worker (ver `ScannerPluginDescriptor`); se activan tras `escalateAfterFrames` frames vacíos. */
+  plugins?: readonly ScannerPluginDescriptor[];
 }
 
 type Handler<K extends ScannerEvent["type"]> = (e: Extract<ScannerEvent, { type: K }>) => void;
@@ -158,6 +160,7 @@ export class Scanner {
       maxCodes: o.maxCodes ?? 4,
       lostAfterMs: o.lostAfterMs ?? 500,
       validateChecksums: o.validateChecksums ?? true,
+      plugins: o.plugins,
     };
   }
 

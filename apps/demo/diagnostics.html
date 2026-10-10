@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Qhago — diagnóstico</title>
+  </head>
+  <body style="font-family: system-ui; max-width: 900px; margin: auto; padding: 1rem">
+    <h1>Diagnóstico del entorno</h1>
+    <p>Copia este informe en el issue. No incluye ids ni nombres de cámaras.</p>
+    <button type="button" id="copy">Copiar informe</button>
+    <pre id="report" style="background: #f4f4f5; padding: 1rem; overflow: auto">cargando…</pre>
+
+    <h2>Fixtures del BarcodeDetector nativo (F4.3)</h2>
+    <p>
+      En Chrome con <code>BarcodeDetector</code> (macOS/Android), elige imágenes de
+      <code>packages/scanner/test/fixtures/</code>. Se descarga un JSON por imagen: guárdalo en
+      <code>packages/scanner/test/fixtures/native/</code> para el test de contrato del polyfill.
+    </p>
+    <input type="file" id="files" accept="image/*" multiple />
+    <pre id="native"></pre>
+    <script type="module" src="/src/diagnostics.ts"></script>
+  </body>
+</html>

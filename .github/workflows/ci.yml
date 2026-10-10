@@ -55,6 +55,7 @@ jobs:
       - run: node packages/scanner/scripts/copy-wasm.mjs
       - run: bun run lint
       - run: bun run typecheck
+      - run: cd packages/scanner && bun scripts/api-report.ts --check
       - run: bun run test
       - run: bunx playwright install --with-deps chromium firefox webkit
       - run: bun run --filter @qhago/scanner test:browser

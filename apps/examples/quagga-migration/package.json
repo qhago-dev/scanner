@@ -1,0 +1,15 @@
+{
+  "name": "qhago-example-quagga-migration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@qhago/scanner": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

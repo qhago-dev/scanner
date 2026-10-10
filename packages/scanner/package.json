@@ -18,6 +18,31 @@
       "browser": "./dist/browser/index.js",
       "default": "./dist/browser/index.js"
     },
+    "./polyfill": {
+      "types": "./dist/types/polyfill/index.d.ts",
+      "bun": "./dist/node/polyfill.js",
+      "node": "./dist/node/polyfill.js",
+      "browser": "./dist/browser/polyfill.js",
+      "default": "./dist/browser/polyfill.js"
+    },
+    "./parsers": {
+      "types": "./dist/types/parsers/index.d.ts",
+      "bun": "./dist/node/parsers.js",
+      "node": "./dist/node/parsers.js",
+      "default": "./dist/browser/parsers.js"
+    },
+    "./quagga-compat": {
+      "types": "./dist/types/quagga-compat/index.d.ts",
+      "default": "./dist/browser/quagga-compat.js"
+    },
+    "./ui": {
+      "types": "./dist/types/ui/index.d.ts",
+      "default": "./dist/browser/ui.js"
+    },
+    "./worker-host": {
+      "types": "./dist/types/worker-host.d.ts",
+      "default": "./dist/browser/worker-host.js"
+    },
     "./wasm/*": "./wasm/*",
     "./package.json": "./package.json"
   },
@@ -52,11 +77,13 @@
     "provenance": true
   },
   "scripts": {
-    "build": "node scripts/copy-wasm.mjs && tsup && tsc -p tsconfig.build.json && node scripts/copy-wasm.mjs --dist",
+    "build": "rm -rf dist && node scripts/copy-wasm.mjs && tsup && tsc -p tsconfig.build.json && node scripts/copy-wasm.mjs --dist",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run --project node && bun test test/bun",
     "test:browser": "vitest run --project browser",
-    "test:all": "vitest run"
+    "test:all": "vitest run",
+    "api": "bun scripts/api-report.ts",
+    "api:check": "bun scripts/api-report.ts --check"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

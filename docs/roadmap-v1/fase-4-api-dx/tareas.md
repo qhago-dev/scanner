@@ -1,5 +1,18 @@
 # Fase 4 — Tareas
 
+## Estado (2026-10-10)
+
+Hecho en local (commit F4):
+- F4.1: inventario y checklist en [api-1.0.md](./api-1.0.md); snapshot `packages/scanner/api/public-api.md` + `api:check` en CI; `plugins`/`ScannerPluginDescriptor` y `workerFactory` por llamada; SSR de todas las entries.
+- F4.2: test de contrato de errores (Node); validación de `strategy`/`region`/límites; mensajes de worker con pista de CSP/CDN.
+- F4.3: polyfill con `HTMLVideoElement`/`SVGImageElement`, test de contrato (Chromium + Firefox). **Pendiente**: grabar fixtures del nativo en Chrome macOS/Android con `apps/demo/diagnostics.html` (requiere dispositivo).
+- F4.4: quagga-compat completo + `apps/examples/quagga-migration` (patrón live_w_locator, solo cambia el import).
+- F4.4b: `mapToElement`/`mapPoints` con tests de cada modo.
+- F4.5: `<qhago-scanner>` (overlay por `trackId`, linterna, cambio de cámara, beep, vibración, `aria-live`, es/en).
+- F4.6: parsers GS1 (tabla escrita a mano desde las GenSpecs; sin dependencia del Syntax Dictionary), QR, AAMVA, ISO 15434.
+- F4.7: `getEnvironmentReport()` + `apps/demo/diagnostics.html`.
+- F4.8: `changeset pre exit` → `pre enter beta` y changeset "API congelada"; borrador `docs/guias/escanear-archivos.md`. **Pendiente (externo)**: publicar `beta`.
+
 ## F4.1 — Revisión y congelación de la API
 **Esfuerzo**: 4h · **Archivos**: `docs/roadmap-v1/fase-4-api-dx/api-1.0.md`, `packages/scanner/src/index.ts`
 - [ ] Inventario de exports; eliminar lo interno (`WasmLoader`, etc.). Debe incluir todo lo público de F2/F3: `listCameras`, `getPermissionState`, `setTorch`, `setZoom`, `switchCamera`, el tipo `ScanErrorCode` y la opción `engine`

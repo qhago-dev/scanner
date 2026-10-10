@@ -21,6 +21,28 @@ export function checkOptions(o: DecodeAllOptions): void {
   }
   if (o.formats && o.formats.length === 0)
     throw new ScanError("INVALID_INPUT", "formats no puede estar vacío");
+  if (o.strategy !== undefined && !["fast", "balanced", "thorough"].includes(o.strategy))
+    throw new ScanError("INVALID_INPUT", `strategy desconocida: ${String(o.strategy)}`);
+  const r = o.region;
+  if (
+    r &&
+    !(
+      [r.x, r.y, r.width, r.height].every(Number.isFinite) &&
+      r.x >= 0 &&
+      r.y >= 0 &&
+      r.width > 0 &&
+      r.height > 0
+    )
+  )
+    throw new ScanError(
+      "INVALID_INPUT",
+      "region debe tener x, y ≥ 0 y width, height > 0 (píxeles)",
+    );
+  for (const k of ["maxSymbols", "timeBudgetMs", "maxInputPixels"] as const) {
+    const v = o[k];
+    if (v !== undefined && !(Number.isFinite(v) && v >= 0))
+      throw new ScanError("INVALID_INPUT", `${k} debe ser un número ≥ 0`);
+  }
 }
 
 /** Lee un raster ya preparado (compartido por decode() y la sesión de escaneo). */

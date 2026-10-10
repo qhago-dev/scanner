@@ -1,0 +1,145 @@
+// Tabla de Application Identifiers GS1, escrita a mano desde las GS1 General Specifications (secc. 3).
+// Formato: AI → [título, longitud mínima, longitud máxima, decimales implícitos (el último dígito del AI)].
+// `n` = numérico. Las entradas con "n" en la clave (310n…) se expanden a sus 10 variantes.
+
+export interface AiSpec {
+  title: string;
+  min: number;
+  max: number;
+  numeric: boolean;
+  /** El último dígito del AI indica la posición decimal (310n, 392n…). */
+  decimal?: boolean;
+}
+
+const RAW: Record<string, [string, number, number, ("n" | "x")?, boolean?]> = {
+  "00": ["SSCC", 18, 18, "n"],
+  "01": ["GTIN", 14, 14, "n"],
+  "02": ["CONTENT", 14, 14, "n"],
+  "10": ["BATCH/LOT", 1, 20],
+  "11": ["PROD DATE", 6, 6, "n"],
+  "12": ["DUE DATE", 6, 6, "n"],
+  "13": ["PACK DATE", 6, 6, "n"],
+  "15": ["BEST BEFORE or BEST BY", 6, 6, "n"],
+  "16": ["SELL BY", 6, 6, "n"],
+  "17": ["USE BY OR EXPIRY", 6, 6, "n"],
+  "20": ["VARIANT", 2, 2, "n"],
+  "21": ["SERIAL", 1, 20],
+  "22": ["CPV", 1, 20],
+  "235": ["TPX", 1, 28],
+  "240": ["ADDITIONAL ID", 1, 30],
+  "241": ["CUST. PART No.", 1, 30],
+  "242": ["MTO VARIANT", 1, 6, "n"],
+  "243": ["PCN", 1, 20],
+  "250": ["SECONDARY SERIAL", 1, 30],
+  "251": ["REF. TO SOURCE", 1, 30],
+  "253": ["GDTI", 13, 30],
+  "254": ["GLN EXTENSION COMPONENT", 1, 20],
+  "255": ["GCN", 13, 25, "n"],
+  "30": ["VAR. COUNT", 1, 8, "n"],
+  "37": ["COUNT", 1, 8, "n"],
+  "310n": ["NET WEIGHT (kg)", 6, 6, "n", true],
+  "311n": ["LENGTH (m)", 6, 6, "n", true],
+  "312n": ["WIDTH (m)", 6, 6, "n", true],
+  "313n": ["HEIGHT (m)", 6, 6, "n", true],
+  "314n": ["AREA (m2)", 6, 6, "n", true],
+  "315n": ["NET VOLUME (l)", 6, 6, "n", true],
+  "316n": ["NET VOLUME (m3)", 6, 6, "n", true],
+  "320n": ["NET WEIGHT (lb)", 6, 6, "n", true],
+  "330n": ["GROSS WEIGHT (kg)", 6, 6, "n", true],
+  "390n": ["AMOUNT", 1, 15, "n", true],
+  "391n": ["AMOUNT (ISO)", 4, 18, "n", true],
+  "392n": ["PRICE", 1, 15, "n", true],
+  "393n": ["PRICE (ISO)", 4, 18, "n", true],
+  "394n": ["PRCNT OFF", 4, 4, "n", true],
+  "400": ["ORDER NUMBER", 1, 30],
+  "401": ["GINC", 1, 30],
+  "402": ["GSIN", 17, 17, "n"],
+  "403": ["ROUTE", 1, 30],
+  "410": ["SHIP TO LOC", 13, 13, "n"],
+  "411": ["BILL TO", 13, 13, "n"],
+  "412": ["PURCHASE FROM", 13, 13, "n"],
+  "413": ["SHIP FOR LOC", 13, 13, "n"],
+  "414": ["LOC No.", 13, 13, "n"],
+  "415": ["PAY TO", 13, 13, "n"],
+  "416": ["PROD/SERV LOC", 13, 13, "n"],
+  "417": ["PARTY", 13, 13, "n"],
+  "420": ["SHIP TO POST", 1, 20],
+  "421": ["SHIP TO POST (ISO)", 4, 12],
+  "422": ["ORIGIN", 3, 3, "n"],
+  "423": ["COUNTRY - INITIAL PROCESS", 4, 15, "n"],
+  "424": ["COUNTRY - PROCESS", 3, 3, "n"],
+  "425": ["COUNTRY - DISASSEMBLY", 4, 15, "n"],
+  "426": ["COUNTRY - FULL PROCESS", 3, 3, "n"],
+  "427": ["ORIGIN SUBDIVISION", 1, 3],
+  "7001": ["NSN", 13, 13, "n"],
+  "7002": ["MEAT CUT", 1, 30],
+  "7003": ["EXPIRY TIME", 10, 10, "n"],
+  "7004": ["ACTIVE POTENCY", 1, 4, "n"],
+  "7005": ["CATCH AREA", 1, 12],
+  "7006": ["FIRST FREEZE DATE", 6, 6, "n"],
+  "7007": ["HARVEST DATE", 6, 12, "n"],
+  "7008": ["AQUATIC SPECIES", 1, 3],
+  "7009": ["FISHING GEAR TYPE", 1, 10],
+  "7010": ["PROD METHOD", 1, 2],
+  "7020": ["REFURB LOT", 1, 20],
+  "7021": ["FUNC STAT", 1, 20],
+  "7022": ["REV STAT", 1, 20],
+  "7023": ["GIAI - ASSEMBLY", 1, 30],
+  "8001": ["DIMENSIONS", 14, 14, "n"],
+  "8002": ["CMT No.", 1, 20],
+  "8003": ["GRAI", 14, 30],
+  "8004": ["GIAI", 1, 30],
+  "8005": ["PRICE PER UNIT", 6, 6, "n"],
+  "8006": ["ITIP", 18, 18, "n"],
+  "8007": ["IBAN", 1, 34],
+  "8008": ["PROD TIME", 8, 12, "n"],
+  "8010": ["CPID", 1, 30],
+  "8011": ["CPID SERIAL", 1, 12, "n"],
+  "8012": ["VERSION", 1, 20],
+  "8013": ["GMN", 1, 25],
+  "8017": ["GSRN - PROVIDER", 18, 18, "n"],
+  "8018": ["GSRN - RECIPIENT", 18, 18, "n"],
+  "8019": ["SRIN", 1, 10, "n"],
+  "8020": ["REF No.", 1, 25],
+  "8026": ["ITIP CONTENT", 18, 18, "n"],
+  "8110": ["COUPON", 1, 70],
+  "8111": ["POINTS", 4, 4, "n"],
+  "8112": ["PAPERLESS COUPON", 1, 70],
+  "8200": ["PRODUCT URL", 1, 70],
+  "90": ["INTERNAL", 1, 30],
+};
+
+export const AIS = new Map<string, AiSpec>();
+for (const [k, [title, min, max, kind, decimal]] of Object.entries(RAW)) {
+  const spec: AiSpec = { title, min, max, numeric: kind === "n", decimal };
+  if (k.endsWith("n")) for (let d = 0; d <= 9; d++) AIS.set(k.slice(0, -1) + d, spec);
+  else AIS.set(k, spec);
+}
+for (let i = 91; i <= 99; i++)
+  AIS.set(String(i), { title: "INTERNAL", min: 1, max: 90, numeric: false });
+
+/** Prefijos de 2 dígitos con longitud predefinida (no necesitan FNC1 detrás), GS1 GenSpecs fig. 5.10.1-2. */
+export const PREDEFINED_LENGTH = new Set([
+  "00",
+  "01",
+  "02",
+  "03",
+  "04",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "31",
+  "32",
+  "33",
+  "34",
+  "35",
+  "36",
+  "41",
+]);

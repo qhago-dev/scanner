@@ -5,7 +5,9 @@ import type { ScannerWorkerOptions } from "../scanner/types";
 import type { BarcodeResult, DecodeOptions, DecodeWithErrors } from "../types";
 
 /** Opciones serializables (sin AbortSignal). */
-export type WireOptions = Omit<DecodeOptions, "signal"> & { includeErrors?: boolean };
+export type WireOptions = Omit<DecodeOptions, "signal" | "workerFactory"> & {
+  includeErrors?: boolean;
+};
 
 export type ToWorker =
   | { t: "init"; wasmModule: WebAssembly.Module }

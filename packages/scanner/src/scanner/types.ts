@@ -1,4 +1,10 @@
-import type { BarcodeFormat, BarcodeResult, DecodeStrategy, Rect } from "../types";
+import type {
+  BarcodeFormat,
+  BarcodeResult,
+  DecodeStrategy,
+  Rect,
+  ScannerPluginDescriptor,
+} from "../types";
 
 /** Resultado con identidad de seguimiento entre frames. Coordenadas en píxeles del vídeo original. */
 export interface TrackedResult extends BarcodeResult {
@@ -47,4 +53,5 @@ export interface ScannerWorkerOptions {
   maxCodes: number;
   lostAfterMs: number;
   validateChecksums: boolean | "strict";
+  plugins?: readonly ScannerPluginDescriptor[];
 }

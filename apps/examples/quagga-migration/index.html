@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Migración desde Quagga2 (live con localizador)</title>
+    <style>
+      #interactive.viewport { position: relative; width: 640px; max-width: 100%; }
+      #interactive.viewport > video, #interactive.viewport > canvas { width: 100%; height: auto; }
+      canvas.drawingBuffer { position: absolute; left: 0; top: 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Quagga2 → @qhago/scanner/quagga-compat</h1>
+    <p>Este es el patrón del ejemplo <em>live_w_locator</em> de Quagga2. El único cambio es el import de <code>main.js</code>.</p>
+    <div id="interactive" class="viewport"></div>
+    <ul id="result_strip"></ul>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

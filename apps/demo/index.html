@@ -4,22 +4,35 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Qhago Scanner — demo</title>
+    <link rel="stylesheet" href="/src/demo.css" />
   </head>
   <body>
-    <h1>Qhago Scanner</h1>
-    <p>Demo en construcción (F3). Mientras tanto: <a href="/collect.html">herramienta de captura del dataset</a>.</p>
-    <input type="file" id="file" accept="image/*" />
-    <pre id="out"></pre>
-    <script type="module">
-      import { decode, FORMATS } from "@qhago/scanner";
-
-      document.getElementById("file").onchange = async (e) => {
-        const f = e.target.files[0];
-        const t = performance.now();
-        const r = await decode(f, { formats: FORMATS, strategy: "thorough" });
-        document.getElementById("out").textContent =
-          `${(performance.now() - t).toFixed(0)} ms\n${JSON.stringify(r.map(({ bytes, ...x }) => x), null, 2)}`;
-      };
-    </script>
+    <header>
+      <h1>Qhago Scanner</h1>
+      <nav><a href="/collect.html">Captura de dataset</a> · <a href="/bench.html">Benchmark en dispositivo</a></nav>
+    </header>
+    <section class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="roi" hidden></div>
+    </section>
+    <section class="controls">
+      <button type="button" id="start">▶ Iniciar</button>
+      <button type="button" id="pause" disabled>⏸ Pausa</button>
+      <button type="button" id="stop" disabled>⏹ Detener</button>
+      <select id="camera" aria-label="Cámara"></select>
+      <button type="button" id="torch" disabled>🔦 Linterna</button>
+      <label>Zoom <input type="range" id="zoom" min="1" max="1" step="0.1" value="1" disabled /></label>
+      <label><input type="checkbox" id="use-roi" /> ROI central</label>
+      <label><input type="checkbox" id="all-formats" /> Todos los formatos</label>
+    </section>
+    <p id="stats" class="hint">—</p>
+    <ol id="results"></ol>
+    <section>
+      <h2>Desde archivo</h2>
+      <input type="file" id="file" accept="image/*" />
+      <pre id="out"></pre>
+    </section>
+    <script type="module" src="/src/demo.ts"></script>
   </body>
 </html>

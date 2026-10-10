@@ -11,6 +11,14 @@ import type { BarcodeResult, DecodeOptions, DecodeWithErrors, EngineConfig } fro
 import { canUseWorker, decodeInWorker, warmWorker } from "./worker/client";
 
 export * from "./api-common";
+export {
+  type CameraCapabilities,
+  type CameraInfo,
+  getPermissionState,
+  listCameras,
+} from "./scanner/camera";
+export { createScanner, Scanner, type ScannerOptions, type ScannerRoute } from "./scanner/scanner";
+export type { FusionOptions, ScannerEvent, ScannerState, TrackedResult } from "./scanner/types";
 
 /** Precarga el motor (y el worker interno en el main thread). Opcional: decode() lo hace solo. */
 export async function init(config?: EngineConfig & { signal?: AbortSignal }): Promise<void> {

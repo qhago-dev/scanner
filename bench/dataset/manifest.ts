@@ -33,6 +33,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const DATASETS: Record<string, string> = {
   real: join(HERE, "real/manifest.jsonl"),
   synthetic: join(HERE, "synthetic/out/manifest.jsonl"),
+  "synthetic-video": join(HERE, "synthetic/out/manifest-video.jsonl"),
   zxing: join(HERE, "zxing/manifest.jsonl"),
 };
 

@@ -5,7 +5,7 @@ export function configureForTests(): void {
   configure({
     wasmUrl: new URL("../../wasm/qhago_engine.wasm", import.meta.url),
     workerFactory: () =>
-      new Worker(new URL("../../src/worker/decode-worker.ts", import.meta.url), { type: "module" }),
+      new Worker(new URL("../../src/worker/worker.ts", import.meta.url), { type: "module" }),
   });
 }
 

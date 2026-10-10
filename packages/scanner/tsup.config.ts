@@ -15,7 +15,11 @@ const common = {
 export default defineConfig([
   {
     ...common,
-    entry: { index: "src/index.ts", "decode-worker": "src/worker/decode-worker.ts" },
+    entry: {
+      index: "src/index.ts",
+      worker: "src/worker/worker.ts",
+      "worker-host": "src/worker-host.ts",
+    },
     outDir: "dist/browser",
     platform: "browser",
     clean: true,

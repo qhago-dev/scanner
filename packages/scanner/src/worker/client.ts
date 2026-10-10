@@ -3,7 +3,7 @@ import { loadModule } from "../engine/load-browser";
 import { ScanError } from "../errors";
 import { type ImageInput, isImageDataLike, isRawImage } from "../input/common";
 import type { BarcodeResult, DecodeWithErrors } from "../types";
-import type { FromDecodeWorker, ToDecodeWorker, WireOptions } from "./protocol";
+import type { FromWorker, ToWorker, WireOptions } from "./protocol";
 
 let worker: Worker | null = null;
 let ready: Promise<Worker> | null = null;
@@ -34,43 +34,53 @@ export function createModuleWorker(url: string | URL): Worker {
   return new Worker(boot, { type: "module" });
 }
 
-function spawn(): Promise<Worker> {
-  ready ??= (async () => {
-    const cfg = getConfig();
-    const w = cfg.workerFactory
-      ? cfg.workerFactory()
-      : createModuleWorker(cfg.workerUrl ?? new URL("./decode-worker.js", import.meta.url));
-    const mod = await loadModule();
-    await new Promise<void>((resolve, reject) => {
-      const onError = (ev: ErrorEvent) =>
-        reject(
-          new ScanError(
-            "ENGINE_LOAD_FAILED",
-            `No se pudo iniciar el worker de decode: ${ev.message}`,
-          ),
-        );
-      w.addEventListener("error", onError, { once: true });
-      w.onmessage = (e: MessageEvent<FromDecodeWorker>) => {
-        const m = e.data;
-        if (m.t === "ready") {
-          w.removeEventListener("error", onError);
-          resolve();
-          return;
-        }
-        const p = pending.get(m.id);
-        if (!p) return;
-        pending.delete(m.id);
-        if (m.t === "result") p.resolve(m.value);
-        else p.reject(new ScanError(m.code, m.message));
-      };
-      w.postMessage({ t: "init", wasmModule: mod } satisfies ToDecodeWorker);
-    });
-    worker = w;
-    return w;
-  })().catch((e) => {
-    ready = null;
-    throw e;
+/** Crea un worker (workerFactory, workerUrl o el interno), le pasa el módulo WASM compilado y espera "ready". */
+export async function createReadyWorker(
+  onMessage?: (m: FromWorker) => void,
+  factory?: () => Worker,
+): Promise<Worker> {
+  const cfg = getConfig();
+  const make = factory ?? cfg.workerFactory;
+  const w = make
+    ? make()
+    : createModuleWorker(cfg.workerUrl ?? new URL("./worker.js", import.meta.url));
+  const mod = await loadModule();
+  await new Promise<void>((resolve, reject) => {
+    const onError = (ev: ErrorEvent) => {
+      w.terminate();
+      reject(new ScanError("ENGINE_LOAD_FAILED", `No se pudo iniciar el worker: ${ev.message}`));
+    };
+    w.addEventListener("error", onError, { once: true });
+    w.onmessage = (e: MessageEvent<FromWorker>) => {
+      if (e.data.t === "ready") {
+        w.removeEventListener("error", onError);
+        resolve();
+      } else {
+        onMessage?.(e.data);
+      }
+    };
+    w.postMessage({ t: "init", wasmModule: mod } satisfies ToWorker);
   });
+  return w;
+}
+
+function spawn(): Promise<Worker> {
+  ready ??= createReadyWorker((m) => {
+    if (m.t !== "result" && m.t !== "error") return; // el worker de decode() no abre sesiones
+    const p = pending.get(m.id);
+    if (!p) return;
+    pending.delete(m.id);
+    if (m.t === "result") p.resolve(m.value);
+    else p.reject(new ScanError(m.code, m.message));
+  })
+    .then((w) => {
+      worker = w;
+      return w;
+    })
+    .catch((e) => {
+      ready = null;
+      throw e;
+    });
   return ready;
 }
 
@@ -116,7 +126,7 @@ export async function decodeInWorker(
       reject(new ScanError("ABORTED", "Operación abortada", { cause: signal?.reason }));
     };
     signal?.addEventListener("abort", onAbort, { once: true });
-    w.postMessage({ t: "decode", id, input: wire, options } satisfies ToDecodeWorker, transfer);
+    w.postMessage({ t: "decode", id, input: wire, options } satisfies ToWorker, transfer);
   });
 }
 

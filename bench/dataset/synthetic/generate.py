@@ -222,16 +222,78 @@ def make_sample(scn: str, idx: int, rng: random.Random):
     return img, codes
 
 
+def make_video(idx: int, rng: random.Random, out: Path, negative: bool = False):
+    """Clip de 4 s a 15 fps: el código entra en cuadro, se mueve (con motion blur según la velocidad),
+    con cambios de luz y desenfoque leve. firstVisibleMs = primer frame con el código completo en cuadro."""
+    W, H, fps, n = 960, 540, 15, 60
+    fmt = rng.choice(list(FORMATS))
+    text = content(fmt, rng)
+    sym = None if negative else render(fmt, text, rng.randint(2, 3))
+    expected = None if sym is None else verify(sym, fmt)
+    if not negative and expected is None:
+        return None
+    if sym is not None:
+        f = rng.uniform(0.25, 0.45) * W / sym.shape[1]
+        sym = cv2.resize(sym, None, fx=f, fy=f, interpolation=cv2.INTER_AREA if f < 1 else cv2.INTER_LINEAR)
+        if sym.shape[0] >= H - 20 or sym.shape[1] >= W - 20:
+            return None
+    bg = background(H, W, rng)
+    x0, y = -int(sym.shape[1] * 0.8) if sym is not None else 0, rng.randint(20, H - (sym.shape[0] if sym is not None else 0) - 20)
+    speed = rng.uniform(6, 16)  # px/frame
+    stop_at = rng.randint(80, max(81, W - (sym.shape[1] if sym is not None else 0) - 80))
+    first_visible = None
+    frames = []
+    x = float(x0)
+    for i in range(n):
+        frame = bg.copy()
+        if sym is not None:
+            moving = x < stop_at
+            if moving:
+                x = min(stop_at, x + speed)
+            xi = int(x)
+            sx0, sx1 = max(0, -xi), min(sym.shape[1], W - xi)
+            if sx1 > sx0:
+                region = sym[:, sx0:sx1]
+                frame[y:y + sym.shape[0], xi + sx0:xi + sx1] = np.minimum(frame[y:y + sym.shape[0], xi + sx0:xi + sx1], region)
+            if first_visible is None and xi >= 0 and xi + sym.shape[1] <= W:
+                first_visible = i
+            if moving:
+                k = max(3, int(speed * 0.8)) | 1
+                kern = np.zeros((k, k), np.float32)
+                kern[k // 2, :] = 1 / k
+                frame = cv2.filter2D(frame, -1, kern)
+        light = 0.85 + 0.15 * np.sin(i / rng.uniform(4, 9))
+        frame = np.clip(frame.astype(np.float32) * light, 0, 255).astype(np.uint8)
+        frames.append(cv2.GaussianBlur(frame, (0, 0), 0.6))
+    sid = f"syn-video-{'negative' if negative else fmt}-{idx:04d}"
+    rel = f"videos/{sid}.mp4"
+    (out / "videos").mkdir(parents=True, exist_ok=True)
+    vw = cv2.VideoWriter(str(out / rel), cv2.VideoWriter_fourcc(*"mp4v"), fps, (W, H), isColor=False)
+    for fr in frames:
+        vw.write(fr)
+    vw.release()
+    data = (out / rel).read_bytes()
+    return {
+        "id": sid, "file": rel, "sha256": hashlib.sha256(data).hexdigest(), "kind": "video",
+        "codes": [] if negative else [{"format": fmt, "text": expected, "firstVisibleMs": round((first_visible or 0) * 1000 / fps)}],
+        "complete": True, "scenarios": ["negative"] if negative else ["video_motion"], "device": "synthetic",
+        "resolution": [W, H], "fps": fps, "source": "synthetic", "license": "own", "object": sid,
+        "split": "test" if rng.random() < 0.5 else "dev",
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--per-scenario", type=int, default=100)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--videos", type=int, default=0, help="clips sintéticos de vídeo (además de las imágenes)")
+    ap.add_argument("--videos-only", action="store_true")
     a = ap.parse_args()
     rng = random.Random(a.seed)
     (a.out / "images").mkdir(parents=True, exist_ok=True)
     lines = []
-    for scn in SCENARIOS:
+    for scn in ([] if a.videos_only else SCENARIOS):
         made = 0
         while made < a.per_scenario:
             s = make_sample(scn, made, rng)
@@ -252,8 +314,16 @@ def main() -> None:
             })
             made += 1
         print(f"{scn}: {made}")
+    made = 0
+    while made < a.videos:
+        v = make_video(made, rng, a.out, negative=made % 12 == 11)
+        if v:
+            lines.append(v)
+            made += 1
+    if a.videos:
+        print(f"videos: {made}")
     # Negativas: fondos con texturas de barras/rejas sin códigos.
-    for i in range(max(10, a.per_scenario // 2)):
+    for i in range(0 if a.videos_only else max(10, a.per_scenario // 2)):
         W, H = 1280, 720
         img = background(H, W, rng)
         for _ in range(rng.randint(5, 20)):
@@ -268,8 +338,9 @@ def main() -> None:
                       "codes": [], "complete": True, "scenarios": ["negative"], "device": "synthetic",
                       "resolution": [W, H], "source": "synthetic", "license": "own", "object": sid,
                       "split": "test" if rng.random() < 0.3 else "dev"})
-    (a.out / "manifest.jsonl").write_text("".join(json.dumps(l, ensure_ascii=False) + "\n" for l in lines))
-    print(f"{len(lines)} muestras → {a.out / 'manifest.jsonl'}")
+    name = "manifest-video.jsonl" if a.videos_only else "manifest.jsonl"
+    (a.out / name).write_text("".join(json.dumps(l, ensure_ascii=False) + "\n" for l in lines))
+    print(f"{len(lines)} muestras → {a.out / name}")
 
 
 if __name__ == "__main__":

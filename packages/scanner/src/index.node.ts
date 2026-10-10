@@ -2,7 +2,7 @@
 import { configure } from "./config";
 import { type DecodeAllOptions, decodeInline, type Platform } from "./core";
 import { loadEngine } from "./engine/load-node";
-import { throwIfAborted } from "./errors";
+import { ScanError, throwIfAborted } from "./errors";
 import type { ImageInput } from "./input/common";
 import { toRaster } from "./input/node";
 import type { BarcodeResult, DecodeOptions, DecodeWithErrors, EngineConfig } from "./types";
@@ -35,3 +35,12 @@ export function decode(
   // En Node/Bun el motor siempre es wasm y se ejecuta en el hilo actual.
   return decodeInline(nodePlatform, input, { ...options, engine: "wasm", worker: false });
 }
+
+/** La cámara solo existe en navegador. */
+export function createScanner(): never {
+  throw new ScanError(
+    "UNSUPPORTED",
+    "createScanner() solo está disponible en navegador; en Node/Bun usa decode()",
+  );
+}
+export type { FusionOptions, ScannerEvent, ScannerState, TrackedResult } from "./scanner/types";

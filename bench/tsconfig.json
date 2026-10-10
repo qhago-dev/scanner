@@ -1,5 +1,11 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": { "noEmit": true, "types": ["bun"] },
-  "include": ["*.ts", "engines", "runners", "dataset/*.ts"]
+  "include": [
+    "*.ts",
+    "engines",
+    "runners",
+    "dataset/*.ts",
+    "../packages/scanner/src/engine/glue.d.ts"
+  ]
 }

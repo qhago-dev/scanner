@@ -1,3 +1,4 @@
+/// <reference types="@vitest/browser/providers/playwright" />
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -17,6 +18,32 @@ export default defineConfig({
           include: ["test/unit/**/*.test.ts", "test/integration/**/*.test.ts"],
           setupFiles: ["test/setup-node.ts"],
           testTimeout: 60_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "camera",
+          include: ["test/camera/**/*.test.ts"],
+          testTimeout: 60_000,
+          browser: {
+            enabled: true,
+            provider: "playwright",
+            headless: true,
+            instances: [
+              {
+                browser: "chromium",
+                launch: {
+                  args: [
+                    "--use-fake-ui-for-media-stream",
+                    "--use-fake-device-for-media-stream",
+                    `--use-file-for-fake-video-capture=${new URL("./test/.cache/ean13-moving.y4m", import.meta.url).pathname}`,
+                  ],
+                },
+                context: { permissions: ["camera"] },
+              },
+            ],
+          },
         },
       },
       {

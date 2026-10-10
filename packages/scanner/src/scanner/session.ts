@@ -182,7 +182,7 @@ export class ScannerSession {
         esc.kind = "read";
         esc.failures = 0;
         esc.key = contentKey(hit.format, hit.bytes);
-        this.vote(esc, hit, now, sx, sy);
+        this.vote(esc, hit, now, sx, sy, true);
         readAny = true;
       }
     }
@@ -203,7 +203,7 @@ export class ScannerSession {
       this.nextSweepAt = now + cost * (1 / SWEEP_DUTY - 1);
       if (k === HEAVY) this.nextHeavyAt = now + cost * (1 / HEAVY_DUTY - 1);
       if (r?.results.length) {
-        this.trackAndVote(r.results, now, sx, sy);
+        this.trackAndVote(r.results, now, sx, sy, true);
         readAny = true;
       }
     }
@@ -240,7 +240,7 @@ export class ScannerSession {
           );
           passes.push(`plugin:${plugin.name}`);
           if (hits.length) {
-            this.trackAndVote(hits, now, sx, sy);
+            this.trackAndVote(hits, now, sx, sy, true);
             this.framesWithoutRead = 0;
           }
         } catch (e) {
@@ -256,7 +256,13 @@ export class ScannerSession {
     return { ms: performance.now() - t0, passes };
   }
 
-  private trackAndVote(results: BarcodeResult[], now: number, sx: number, sy: number): void {
+  private trackAndVote(
+    results: BarcodeResult[],
+    now: number,
+    sx: number,
+    sy: number,
+    weak = false,
+  ): void {
     const a = this.tracker.update(
       results.map((x) => ({
         format: x.format,
@@ -267,12 +273,19 @@ export class ScannerSession {
     ).assigned;
     results.forEach((x, i) => {
       const t = a[i];
-      if (t) this.vote(t, x, now, sx, sy);
+      if (t) this.vote(t, x, now, sx, sy, weak);
     });
   }
 
-  private vote(t: Track, r: BarcodeResult, now: number, sx: number, sy: number): void {
-    const d = this.fusion.observe(t.id, contentKey(r.format, r.bytes), r.format, r.text, now);
+  private vote(
+    t: Track,
+    r: BarcodeResult,
+    now: number,
+    sx: number,
+    sy: number,
+    weak = false,
+  ): void {
+    const d = this.fusion.observe(t.id, contentKey(r.format, r.bytes), r.format, r.text, now, weak);
     const c = r.cornerPoints.map((p) => scalePoint(p, sx, sy)) as [Point, Point, Point, Point];
     const b = r.boundingBox;
     const result: TrackedResult = {

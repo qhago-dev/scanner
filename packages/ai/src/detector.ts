@@ -14,6 +14,8 @@ import { fromHalf, letterbox, toHalf } from "./preprocess";
 type Ort = typeof import("onnxruntime-web");
 
 const CACHE = `qhago-ai-${MODEL_VERSION}`;
+/** Fracción máxima del tiempo de vídeo que puede ocupar la inferencia. */
+const AI_DUTY = 0.25;
 
 async function fetchModel(url: string, useCache: boolean): Promise<Uint8Array> {
   const cache =
@@ -67,17 +69,18 @@ export async function createAiDetector(options: PluginOptions): Promise<ScannerP
       : (t.data as Float32Array);
   const intervalMs = Number(options.intervalMs ?? 300);
   let busy = false;
-  let last = Number.NEGATIVE_INFINITY;
+  let next = Number.NEGATIVE_INFINITY;
 
   return {
     name: "ai-detector",
     when: options.when === "always" ? "always" : "fallback",
     async onFrame(raster: PluginRaster, ctx): Promise<PluginProposal[]> {
-      // En vídeo, como mucho una inferencia cada intervalMs (en decode() de una imagen, siempre).
+      // En vídeo, como mucho una inferencia cada intervalMs y nunca más del 25 % del tiempo: en un Android
+      // de gama media una inferencia WASM tarda ~1 s y bloquea el worker (medido: frames de 1-3 s).
+      // En decode() de una imagen, siempre.
       const now = performance.now();
-      if (busy || (ctx.source === "video" && now - last < intervalMs)) return [];
+      if (busy || (ctx.source === "video" && now < next)) return [];
       busy = true;
-      last = now;
       try {
         const [x, lb] = letterbox(raster, buf);
         const input = half
@@ -99,6 +102,8 @@ export async function createAiDetector(options: PluginOptions): Promise<ScannerP
         }));
       } finally {
         busy = false;
+        const cost = performance.now() - now;
+        next = performance.now() + Math.max(intervalMs - cost, cost * (1 / AI_DUTY - 1));
       }
     },
     dispose() {

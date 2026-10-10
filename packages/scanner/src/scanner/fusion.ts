@@ -2,6 +2,11 @@ import type { BarcodeFormat } from "../types";
 import type { FusionOptions } from "./types";
 
 const WEAK = new Set<BarcodeFormat>(["code_39", "code_93", "codabar", "itf"]);
+/**
+ * EAN/UPC: 1 dígito de control. Leídos solo por pasadas de escalado, en fotos reales de Android han dado
+ * lecturas falsas con checksum válido (envases arrugados) → se confirman en 2 frames.
+ */
+const EAN_UPC = new Set<BarcodeFormat>(["ean_13", "ean_8", "upc_a", "upc_e"]);
 
 /** Regla de ADR-05: frames necesarios para confirmar una lectura. */
 export function framesNeeded(
@@ -54,6 +59,8 @@ export class Fusion {
     format: BarcodeFormat,
     text: string,
     now: number,
+    /** Lectura de una pasada de escalado (harder/barrido/plugin): un EAN/UPC necesita ≥ 2 frames. */
+    weak = false,
   ): FusionDecision {
     let v = this.votes.get(trackId);
     if (!v || v.key !== key || now - v.last > this.opt.windowMs) {
@@ -62,7 +69,8 @@ export class Fusion {
     }
     v.count++;
     v.last = now;
-    if (v.count < framesNeeded(format, text, this.opt.confirmFrames))
+    const need = framesNeeded(format, text, this.opt.confirmFrames);
+    if (v.count < (weak && EAN_UPC.has(format) ? Math.max(2, need) : need))
       return { kind: "candidate", votes: v.count, firstSeen: v.first };
     const prev = this.emitted.get(key);
     if (prev !== undefined && now - prev < this.opt.duplicateCooldownMs) {

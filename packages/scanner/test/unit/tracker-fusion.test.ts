@@ -99,6 +99,15 @@ describe("fusión", () => {
     expect(f.observe(1, a, "itf", "123456", 90).kind).toBe("detect");
   });
 
+  it("EAN leído solo por escalado (weak) necesita 2 frames; el de la pasada normal, 1", () => {
+    const f = new Fusion(opt);
+    const k = contentKey("ean_13", new TextEncoder().encode("2548033204265"));
+    expect(f.observe(1, k, "ean_13", "2548033204265", 0, true).kind).toBe("candidate");
+    expect(f.observe(1, k, "ean_13", "2548033204265", 66, true).kind).toBe("detect");
+    const g = new Fusion(opt);
+    expect(g.observe(2, k, "ean_13", "2548033204265", 0).kind).toBe("detect");
+  });
+
   it("fuera de la ventana el voto se reinicia", () => {
     const f = new Fusion(opt);
     const k = contentKey("codabar", new TextEncoder().encode("A12B"));

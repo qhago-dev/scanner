@@ -93,7 +93,7 @@ export interface DecodeOptions {
   workerFactory?: () => Worker;
   /**
    * Plugins que el worker aplica cuando la cascada no lee nada (p. ej. `aiDetector()` de @qhago/ai).
-   * Requieren un worker que los registre (`workerFactory`); sin él se ignoran con un warning.
+   * Requieren un worker que los registre (`workerFactory`); sin él, `decode()` y `start()` lanzan `ScanError("UNSUPPORTED")`.
    */
   plugins?: readonly ScannerPluginDescriptor[];
 }

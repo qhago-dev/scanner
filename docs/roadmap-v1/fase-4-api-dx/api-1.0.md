@@ -46,7 +46,7 @@ interface ScannerPluginDescriptor {
 ```
 
 El descriptor viaja al worker, que lo resuelve por `name` en el registro que le da `startWorkerHost({ plugins })`.
-Sin un worker que registre el plugin (es decir, sin `workerFactory` de `@qhago/ai`), se ignora con un warning.
+Sin un worker que registre el plugin (es decir, sin `workerFactory` de `@qhago/ai`), `decode()` y `Scanner.start()` lanzan `ScanError("UNSUPPORTED")` con un mensaje que lo explica. El worker anuncia sus plugins en el mensaje `ready`; la interfaz del lado del worker (`ScannerPlugin`, `PluginProposal`, `startWorkerHost({ plugins })`) se exporta desde `@qhago/scanner/worker-host` (F5.6, extensión compatible).
 
 ## Configuración
 

@@ -8,6 +8,7 @@
 //   json = UTF8ToString(sa_result_json())
 // SPDX-License-Identifier: MIT
 #include "cascade.h"
+#include "warp.h"
 
 #include <cstdio>
 #include <cstring>
@@ -26,6 +27,8 @@ namespace {
 
 std::vector<uint8_t> g_input;
 std::vector<uint8_t> g_luma;
+std::vector<uint8_t> g_warp;
+float g_quad[8];
 int32_t g_options[qhago::kOptCount];
 std::string g_json;
 int g_imageW = 0, g_imageH = 0;
@@ -137,10 +140,15 @@ int32_t Fail(const char* what) {
   return -1;
 }
 
-int32_t Read(const uint8_t* luma, int w, int h, const int32_t* opts) {
+int32_t Read(const uint8_t* luma, int w, int h, const int32_t* opts, const qhago::Homography* back = nullptr) {
   if (!luma || w <= 0 || h <= 0) return Fail("invalid image");
   try {
-    const qhago::Outcome o = qhago::RunCascade(luma, w, h, opts ? opts : g_options);
+    qhago::Outcome o = qhago::RunCascade(luma, w, h, opts ? opts : g_options);
+    if (back) {  // puntos del rectángulo warpeado → imagen de origen
+      for (auto* list : {&o.results, &o.candidates})
+        for (auto& r : *list)
+          for (int i = 0; i < 4; ++i) back->Apply(r.pts[2 * i], r.pts[2 * i + 1], r.pts[2 * i], r.pts[2 * i + 1]);
+    }
     Serialize(o);
     return static_cast<int32_t>(o.results.size());
   } catch (const std::exception& e) {
@@ -174,6 +182,21 @@ int32_t sa_read_rgba(const uint8_t* rgba, int32_t w, int32_t h, int32_t stride, 
 
 const char* sa_result_json(void) { return g_json.c_str(); }
 
+// ABI 2 (F5.5): lee el cuadrilátero g_quad (TL, TR, BR, BL, escrito vía sa_quad_ptr) rectificado a dstW×dstH.
+// src es luma (channels 1) o RGBA (4); los puntos devueltos están en coordenadas de src.
+float* sa_quad_ptr(void) { return g_quad; }
+
+int32_t sa_read_quad(const uint8_t* src, int32_t w, int32_t h, int32_t stride, int32_t channels, int32_t dstW,
+                     int32_t dstH, const int32_t* opts) {
+  if (!src || w <= 0 || h <= 0 || (channels != 1 && channels != 4) || stride < w * channels || dstW <= 0 ||
+      dstH <= 0 || static_cast<int64_t>(dstW) * dstH > 16'000'000)
+    return Fail("invalid quad read");
+  const qhago::Homography hm = qhago::RectToQuad(g_quad, dstW, dstH);
+  g_warp.resize(static_cast<size_t>(dstW) * dstH);
+  qhago::WarpQuad(src, w, h, stride, channels, hm, g_warp.data(), dstW, dstH);
+  return Read(g_warp.data(), dstW, dstH, opts, &hm);
+}
+
 // Decodifica PNG/JPEG (solo build node). Deja la luma en el buffer interno y devuelve su puntero.
 uint8_t* sa_decode_image(const uint8_t* data, uint32_t len) {
 #ifdef QHAGO_WITH_IMAGE_DECODER
@@ -202,6 +225,7 @@ int32_t sa_image_height(void) { return g_imageH; }
 void sa_free(void) {
   std::vector<uint8_t>().swap(g_input);
   std::vector<uint8_t>().swap(g_luma);
+  std::vector<uint8_t>().swap(g_warp);
   std::string().swap(g_json);
 }
 

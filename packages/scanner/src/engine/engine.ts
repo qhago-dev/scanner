@@ -90,24 +90,27 @@ function cString(m: EngineModule, ptr: number): string {
 }
 
 export class Engine {
+  /** Raster cuyo contenido está ya en el buffer de entrada del motor (evita copiarlo otra vez en readQuad). */
+  private loaded: Raster | null = null;
+
   constructor(private readonly m: EngineModule) {}
+
+  /** Copia el raster al heap (si no está ya) y escribe las opciones. Devuelve [ptr, optPtr]. */
+  private load(r: Raster, opts: Int32Array): [number, number] {
+    const m = this.m;
+    if (opts.length !== OPT_COUNT) throw new Error("opciones del motor con tamaño incorrecto");
+    const bytes = r.kind === "rgba" ? r.stride * r.height : r.width * r.height;
+    const ptr = m._sa_alloc_input(bytes);
+    if (this.loaded !== r) this.copy(r, ptr, bytes);
+    this.loaded = r;
+    const optPtr = m._sa_options_ptr();
+    new Int32Array(m.HEAPU8.buffer, optPtr, OPT_COUNT).set(opts);
+    return [ptr, optPtr];
+  }
 
   read(r: Raster, opts: Int32Array): EngineOutput {
     const m = this.m;
-    if (opts.length !== OPT_COUNT) throw new Error("opciones del motor con tamaño incorrecto");
-    const rowBytes = r.kind === "rgba" ? r.width * 4 : r.width;
-    const bytes = r.kind === "rgba" ? r.stride * r.height : r.width * r.height;
-    const ptr = m._sa_alloc_input(bytes);
-    // Con ALLOW_MEMORY_GROWTH las vistas se invalidan: leer m.HEAPU8 siempre después de reservar.
-    const heap = m.HEAPU8;
-    if (r.kind === "luma" && r.stride !== r.width) {
-      for (let y = 0; y < r.height; y++)
-        heap.set(r.data.subarray(y * r.stride, y * r.stride + rowBytes), ptr + y * r.width);
-    } else {
-      heap.set(r.data.subarray(0, bytes), ptr);
-    }
-    const optPtr = m._sa_options_ptr();
-    new Int32Array(m.HEAPU8.buffer, optPtr, OPT_COUNT).set(opts);
+    const [ptr, optPtr] = this.load(r, opts);
     const n =
       r.kind === "rgba"
         ? m._sa_read_rgba(ptr, r.width, r.height, r.stride, optPtr)
@@ -115,9 +118,61 @@ export class Engine {
     return this.parse(n);
   }
 
+  /**
+   * Lee el cuadrilátero `quad` (TL, TR, BR, BL en píxeles del raster) rectificado a `dstW`×`dstH` con un warp
+   * bilineal en el motor (F5.5). Los puntos devueltos están en coordenadas del raster.
+   */
+  readQuad(
+    r: Raster,
+    quad: readonly Point[],
+    dstW: number,
+    dstH: number,
+    opts: Int32Array,
+  ): EngineOutput {
+    const m = this.m;
+    const [ptr, optPtr] = this.load(r, opts);
+    const q = new Float32Array(m.HEAPU8.buffer, m._sa_quad_ptr(), 8);
+    quad.forEach((p, i) => {
+      q[2 * i] = p.x;
+      q[2 * i + 1] = p.y;
+    });
+    const channels = r.kind === "rgba" ? 4 : 1;
+    const stride = r.kind === "rgba" ? r.stride : r.width;
+    return this.parse(
+      m._sa_read_quad(
+        ptr,
+        r.width,
+        r.height,
+        stride,
+        channels,
+        Math.round(dstW),
+        Math.round(dstH),
+        optPtr,
+      ),
+    );
+  }
+
+  /** Olvida el raster cargado (p. ej. si el llamante reutiliza el mismo objeto con otros píxeles). */
+  invalidate(): void {
+    this.loaded = null;
+  }
+
+  private copy(r: Raster, ptr: number, bytes: number): void {
+    const rowBytes = r.kind === "rgba" ? r.width * 4 : r.width;
+    // Con ALLOW_MEMORY_GROWTH las vistas se invalidan: leer m.HEAPU8 siempre después de reservar.
+    const heap = this.m.HEAPU8;
+    if (r.kind === "luma" && r.stride !== r.width) {
+      for (let y = 0; y < r.height; y++)
+        heap.set(r.data.subarray(y * r.stride, y * r.stride + rowBytes), ptr + y * r.width);
+    } else {
+      heap.set(r.data.subarray(0, bytes), ptr);
+    }
+  }
+
   /** Solo build node: decodifica PNG/JPEG con stb_image y lee. */
   decodeEncoded(file: Uint8Array): Raster | null {
     const m = this.m;
+    this.loaded = null;
     const ptr = m._sa_alloc_input(file.length);
     m.HEAPU8.set(file, ptr);
     const luma = m._sa_decode_image(ptr, file.length);

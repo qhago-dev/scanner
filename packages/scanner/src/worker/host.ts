@@ -4,6 +4,7 @@ import { configure } from "../config";
 import { decodeInline } from "../core";
 import { isScanError } from "../errors";
 import { browserPlatform } from "../platform-browser";
+import { PluginRegistry, type ScannerPluginFactory } from "../plugins";
 import { ScannerSession } from "../scanner/session";
 import type { FromWorker, ToWorker } from "./protocol";
 
@@ -23,7 +24,16 @@ interface StreamState {
   last: number;
 }
 
-export function startWorkerHost(port: Port = self as unknown as Port): void {
+export interface WorkerHostOptions {
+  /** Default: el scope global del worker. */
+  port?: Port;
+  /** Plugins que este worker sabe ejecutar, por nombre de descriptor (p. ej. { "ai-detector": factory }). */
+  plugins?: Record<string, ScannerPluginFactory>;
+}
+
+export function startWorkerHost(options: WorkerHostOptions = {}): void {
+  const port = options.port ?? (self as unknown as Port);
+  const registry = new PluginRegistry(options.plugins);
   const sessions = new Map<number, ScannerSession>();
   const streams = new Map<number, StreamState>();
   const post = (m: FromWorker) => port.postMessage(m);
@@ -66,14 +76,16 @@ export function startWorkerHost(port: Port = self as unknown as Port): void {
     switch (m.t) {
       case "init":
         configure({ wasmModule: m.wasmModule });
-        post({ t: "ready" });
+        post({ t: "ready", plugins: registry.names() });
         return;
       case "decode":
         try {
-          const value = await decodeInline(browserPlatform, m.input, {
-            ...m.options,
-            worker: false,
-          });
+          const value = await decodeInline(
+            browserPlatform,
+            m.input,
+            { ...m.options, worker: false },
+            registry,
+          );
           post({ t: "result", id: m.id, value });
         } catch (err) {
           post({
@@ -91,8 +103,11 @@ export function startWorkerHost(port: Port = self as unknown as Port): void {
       case "open":
         sessions.set(
           m.sid,
-          new ScannerSession(m.options, browserPlatform, (event) =>
-            post({ t: "event", sid: m.sid, event }),
+          new ScannerSession(
+            m.options,
+            browserPlatform,
+            (event) => post({ t: "event", sid: m.sid, event }),
+            registry,
           ),
         );
         return;

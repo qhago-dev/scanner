@@ -29,7 +29,7 @@ export type ToWorker =
   | { t: "close"; sid: number };
 
 export type FromWorker =
-  | { t: "ready" }
+  | { t: "ready"; plugins?: string[] }
   | { t: "result"; id: number; value: BarcodeResult[] | DecodeWithErrors }
   | { t: "error"; id: number; code: ScanErrorCode; message: string }
   | { t: "done"; sid: number; id: number; ms: number; passes: string[] }

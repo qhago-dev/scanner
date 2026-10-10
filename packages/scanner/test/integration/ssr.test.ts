@@ -19,7 +19,7 @@ describe("SSR", () => {
     const { getEnvironmentReport } = await import("../../src/index.node");
     const r = await getEnvironmentReport();
     expect(r.runtime).toBe("node");
-    expect(r.abi).toBe(1);
+    expect(r.abi).toBe(2);
     expect(r.features.webAssembly).toBe(true);
   });
 

@@ -2,7 +2,8 @@ import { getConfig } from "../config";
 import { loadModule } from "../engine/load-browser";
 import { ScanError } from "../errors";
 import { type ImageInput, isImageDataLike, isRawImage } from "../input/common";
-import type { BarcodeResult, DecodeWithErrors } from "../types";
+import { missingPluginError } from "../plugins";
+import type { BarcodeResult, DecodeWithErrors, ScannerPluginDescriptor } from "../types";
 import type { FromWorker, ToWorker, WireOptions } from "./protocol";
 
 // Un worker por fábrica (undefined = el de la config global / interno).
@@ -12,6 +13,19 @@ const pending = new Map<
   number,
   { resolve: (v: BarcodeResult[] | DecodeWithErrors) => void; reject: (e: unknown) => void }
 >();
+
+/** Plugins que anunció cada worker en su mensaje "ready". */
+const workerPlugins = new WeakMap<Worker, string[]>();
+
+/** Lanza UNSUPPORTED si el worker no registra alguno de los plugins pedidos. */
+export function assertPlugins(
+  w: Worker | null,
+  wanted: readonly ScannerPluginDescriptor[] | undefined,
+): void {
+  const have = (w && workerPlugins.get(w)) || [];
+  const missing = (wanted ?? []).map((d) => d.name).filter((n) => !have.includes(n));
+  if (missing.length) throw missingPluginError(missing);
+}
 
 /** true en el main thread de un navegador con lo necesario para el worker. */
 export function canUseWorker(): boolean {
@@ -59,6 +73,7 @@ export async function createReadyWorker(
     w.addEventListener("error", onError, { once: true });
     w.onmessage = (e: MessageEvent<FromWorker>) => {
       if (e.data.t === "ready") {
+        workerPlugins.set(w, e.data.plugins ?? []);
         w.removeEventListener("error", onError);
         resolve();
       } else {
@@ -122,6 +137,7 @@ export async function decodeInWorker(
   factory?: () => Worker,
 ): Promise<BarcodeResult[] | DecodeWithErrors> {
   const w = await spawn(factory);
+  assertPlugins(w, options.plugins);
   const [wire, transfer] = await toWire(input);
   const id = nextId++;
   return new Promise((resolve, reject) => {

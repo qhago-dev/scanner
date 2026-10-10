@@ -4,6 +4,7 @@ import { ScanError, throwIfAborted } from "./errors";
 import { DEFAULT_FORMATS, isBarcodeFormat } from "./formats";
 import { normalizeUpc } from "./gtin";
 import { checkPixels, type ImageInput } from "./input/common";
+import { decodeWithPlugins, missingPluginError, type PluginRegistry } from "./plugins";
 import type { BarcodeResult, DecodeOptions, DecodeWithErrors } from "./types";
 import { passesValidation } from "./validate";
 
@@ -80,12 +81,18 @@ export async function decodeInline(
   p: Platform,
   input: ImageInput,
   options: DecodeAllOptions = {},
+  registry?: PluginRegistry,
 ): Promise<BarcodeResult[] | DecodeWithErrors> {
   checkOptions(options);
   throwIfAborted(options.signal);
+  const wanted = options.plugins ?? [];
+  const missing = wanted.map((d) => d.name).filter((n) => !registry?.names().includes(n));
+  if (missing.length) throw missingPluginError(missing);
   const engine = await p.loadEngine();
   const raster = await p.toRaster(input, engine);
   throwIfAborted(options.signal);
-  const { results, candidates } = readRaster(engine, raster, options);
+  const { results, candidates } = wanted.length
+    ? await decodeWithPlugins(engine, raster, (registry as PluginRegistry).resolve(wanted), options)
+    : readRaster(engine, raster, options);
   return options.includeErrors ? { results, candidates } : results;
 }

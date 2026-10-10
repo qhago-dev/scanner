@@ -5,6 +5,8 @@ sa_options_ptr
 sa_read
 sa_read_rgba
 sa_result_json
+sa_quad_ptr
+sa_read_quad
 sa_decode_image
 sa_image_width
 sa_image_height

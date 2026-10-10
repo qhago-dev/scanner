@@ -1,7 +1,7 @@
 import { ScanError } from "../errors";
 
 /** Versión del ABI que espera este JS (debe coincidir con kAbiVersion en el motor C++). */
-export const ABI_VERSION = 1;
+export const ABI_VERSION = 2;
 
 /** Superficie del módulo Emscripten (exports.txt + runtime). */
 export interface EngineModule {
@@ -12,6 +12,17 @@ export interface EngineModule {
   _sa_read(luma: number, w: number, h: number, opts: number): number;
   _sa_read_rgba(rgba: number, w: number, h: number, stride: number, opts: number): number;
   _sa_result_json(): number;
+  _sa_quad_ptr(): number;
+  _sa_read_quad(
+    src: number,
+    w: number,
+    h: number,
+    stride: number,
+    channels: number,
+    dstW: number,
+    dstH: number,
+    opts: number,
+  ): number;
   _sa_decode_image(data: number, len: number): number;
   _sa_image_width(): number;
   _sa_image_height(): number;

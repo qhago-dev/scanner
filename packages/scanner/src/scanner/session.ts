@@ -3,6 +3,12 @@ import { type Platform, readRaster } from "../core";
 import type { Engine, Raster } from "../engine/engine";
 import { isScanError, ScanError } from "../errors";
 import type { ImageInput } from "../input/common";
+import {
+  missingPluginError,
+  type PluginRegistry,
+  readProposals,
+  type ScannerPlugin,
+} from "../plugins";
 import type { BarcodeResult, Point, Rect } from "../types";
 import { contentKey, Fusion } from "./fusion";
 import { type Observation, type Track, Tracker } from "./tracker";
@@ -38,11 +44,15 @@ export class ScannerSession {
   private emptyFrames = 0;
   private sweepIndex = 0;
   private reported = new Set<number>();
+  private framesWithoutRead = 0;
+  private plugins: Promise<ScannerPlugin[]> | null = null;
+  private pluginError = false;
 
   constructor(
     private opts: ScannerWorkerOptions,
     private readonly platform: Platform,
     private readonly emit: (e: WireEvent) => void,
+    private readonly registry?: PluginRegistry,
   ) {
     this.tracker = new Tracker(opts.lostAfterMs);
     this.fusion = new Fusion(opts.fusion);
@@ -51,6 +61,23 @@ export class ScannerSession {
   configure(next: Partial<ScannerWorkerOptions>): void {
     this.opts = { ...this.opts, ...next };
     this.fusion.setOptions(this.opts.fusion);
+    if ("plugins" in next) this.plugins = null;
+  }
+
+  /** Plugins resueltos (una vez); si falta alguno o falla su inicialización se emite un error y se ignoran. */
+  private loadPlugins(): Promise<ScannerPlugin[]> {
+    const wanted = this.opts.plugins ?? [];
+    this.plugins ??= (async () => {
+      if (!wanted.length) return [];
+      const missing = wanted.map((d) => d.name).filter((n) => !this.registry?.names().includes(n));
+      if (missing.length) throw missingPluginError(missing);
+      return Promise.all((this.registry as PluginRegistry).resolve(wanted));
+    })().catch((e) => {
+      if (!this.pluginError) this.emitError(e);
+      this.pluginError = true;
+      return [];
+    });
+    return this.plugins;
   }
 
   /** Cambio de dimensiones/rotación del stream: el tracking anterior ya no es válido. */
@@ -115,6 +142,7 @@ export class ScannerSession {
     });
 
     // Escalado: un track unread que ya falló 2 veces → thorough en su ROI expandida (máx. 1 por frame).
+    let readAny = frame.results.length > 0;
     const esc = this.tracker.escalations()[0];
     if (esc) {
       const r = this.safeRead(read, this.expand(esc.box, raster, 0.2), "thorough");
@@ -124,6 +152,7 @@ export class ScannerSession {
         esc.failures = 0;
         esc.key = contentKey(hit.format, hit.bytes);
         this.vote(esc, hit, now, sx, sy);
+        readAny = true;
       }
     }
 
@@ -135,18 +164,49 @@ export class ScannerSession {
       const region = this.intersect(this.toPx(zone, raster), roi);
       const r = region && this.safeRead(read, region, "thorough");
       if (r?.results.length) {
-        const a = this.tracker.update(
-          r.results.map((x) => ({
-            format: x.format,
-            corners: x.cornerPoints,
-            key: contentKey(x.format, x.bytes),
-          })),
-          now,
-        ).assigned;
-        r.results.forEach((x, i) => {
-          const t = a[i];
-          if (t) this.vote(t, x, now, sx, sy);
-        });
+        this.trackAndVote(r.results, now, sx, sy);
+        readAny = true;
+      }
+    }
+
+    // Plugins (F5.6): en "fallback" solo tras escalateAfterFrames frames sin lectura.
+    this.framesWithoutRead = readAny ? 0 : this.framesWithoutRead + 1;
+    if (this.opts.plugins?.length) {
+      for (const plugin of await this.loadPlugins()) {
+        const due =
+          plugin.when === "always" ||
+          (!readAny && this.framesWithoutRead >= this.opts.escalateAfterFrames);
+        if (!due) continue;
+        try {
+          const props = (
+            await plugin.onFrame(raster, {
+              framesWithoutRead: this.framesWithoutRead,
+              source: "video",
+            })
+          ).filter((p) => {
+            const c = p.quad.reduce((s, q) => ({ x: s.x + q.x / 4, y: s.y + q.y / 4 }), {
+              x: 0,
+              y: 0,
+            });
+            return (
+              c.x >= roi.x && c.y >= roi.y && c.x <= roi.x + roi.width && c.y <= roi.y + roi.height
+            );
+          });
+          const hits = readProposals(
+            engine,
+            raster,
+            props,
+            { ...base, maxSymbols: undefined },
+            this.opts.maxCodes,
+          );
+          passes.push(`plugin:${plugin.name}`);
+          if (hits.length) {
+            this.trackAndVote(hits, now, sx, sy);
+            this.framesWithoutRead = 0;
+          }
+        } catch (e) {
+          this.emitError(e);
+        }
       }
     }
 
@@ -155,6 +215,21 @@ export class ScannerSession {
       if (this.reported.delete(t.id)) this.emit({ type: "lost", trackId: t.id });
     }
     return { ms: performance.now() - t0, passes };
+  }
+
+  private trackAndVote(results: BarcodeResult[], now: number, sx: number, sy: number): void {
+    const a = this.tracker.update(
+      results.map((x) => ({
+        format: x.format,
+        corners: x.cornerPoints,
+        key: contentKey(x.format, x.bytes),
+      })),
+      now,
+    ).assigned;
+    results.forEach((x, i) => {
+      const t = a[i];
+      if (t) this.vote(t, x, now, sx, sy);
+    });
   }
 
   private vote(t: Track, r: BarcodeResult, now: number, sx: number, sy: number): void {

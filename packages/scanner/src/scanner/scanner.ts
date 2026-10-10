@@ -2,8 +2,9 @@
 import { ScanError, throwIfAborted } from "../errors";
 import { DEFAULT_FORMATS, isBarcodeFormat } from "../formats";
 import { browserPlatform } from "../platform-browser";
+import { missingPluginError } from "../plugins";
 import type { BarcodeFormat, DecodeStrategy, Rect, ScannerPluginDescriptor } from "../types";
-import { canUseWorker, createReadyWorker } from "../worker/client";
+import { assertPlugins, canUseWorker, createReadyWorker } from "../worker/client";
 import type { FromWorker, ToWorker } from "../worker/protocol";
 import {
   applyAdvanced,
@@ -257,6 +258,7 @@ export class Scanner {
   private async openTransport(): Promise<void> {
     this._route = this.chooseRoute();
     if (this._route === "inline") {
+      if (this.opts.plugins?.length) throw missingPluginError(this.opts.plugins.map((d) => d.name));
       this.inline = new ScannerSession(this.workerOptions(), browserPlatform, (e) =>
         this.onWire(e),
       );
@@ -264,6 +266,13 @@ export class Scanner {
       return;
     }
     this.worker = await createReadyWorker((m) => this.onWorker(m), this.opts.workerFactory);
+    try {
+      assertPlugins(this.worker, this.opts.plugins);
+    } catch (e) {
+      this.worker.terminate();
+      this.worker = null;
+      throw e;
+    }
     this.post({ t: "open", sid: this.sid, options: this.workerOptions() });
   }
 

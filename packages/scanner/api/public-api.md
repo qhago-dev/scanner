@@ -694,6 +694,7 @@ export interface QhagoScannerLabels {
 ```ts
 export type FromWorker = {
     t: "ready";
+    plugins?: string[];
 } | {
     t: "result";
     id: number;
@@ -714,7 +715,31 @@ export type FromWorker = {
     sid: number;
     event: WireEvent;
 };
-export function startWorkerHost(port: Port = self as unknown as Port): void;
+const PLUGIN_API_VERSION: 1;
+export interface PluginFrameContext {
+    framesWithoutRead: number;
+    source: "image" | "video";
+}
+export type PluginOptions = NonNullable<ScannerPluginDescriptor["options"]>;
+export interface PluginProposal {
+    quad: readonly [
+        Point,
+        Point,
+        Point,
+        Point
+    ];
+    formats?: readonly BarcodeFormat[];
+    score: number;
+}
+export type PluginRaster = Readonly<Raster>;
+export interface ScannerPlugin {
+    readonly name: string;
+    readonly when?: "fallback" | "always";
+    onFrame(raster: PluginRaster, ctx: PluginFrameContext): Promise<PluginProposal[]>;
+    dispose?(): void;
+}
+export type ScannerPluginFactory = (options: PluginOptions) => ScannerPlugin | Promise<ScannerPlugin>;
+export function startWorkerHost(options: WorkerHostOptions = {}): void;
 export type ToWorker = {
     t: "init";
     wasmModule: WebAssembly.Module;
@@ -759,4 +784,8 @@ export type ToWorker = {
     t: "close";
     sid: number;
 };
+export interface WorkerHostOptions {
+    port?: Port;
+    plugins?: Record<string, ScannerPluginFactory>;
+}
 ```

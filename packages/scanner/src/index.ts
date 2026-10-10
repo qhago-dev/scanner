@@ -46,7 +46,8 @@ export async function decode(
   checkOptions(options);
   throwIfAborted(options.signal);
   const engine = options.engine ?? "wasm";
-  if (engine !== "wasm" && !options.includeErrors) {
+  // Los plugins solo existen en el motor WASM (dentro de su worker).
+  if (engine !== "wasm" && !options.includeErrors && !options.plugins?.length) {
     const useNative =
       engine === "native" || (await nativeSupports(options.formats ?? DEFAULT_FORMATS));
     if (useNative) return decodeNative(input, options);

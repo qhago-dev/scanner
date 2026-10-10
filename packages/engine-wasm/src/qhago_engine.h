@@ -10,7 +10,7 @@ namespace qhago {
 
 // Versión del ABI C expuesto al JS. Se incrementa en cada cambio incompatible
 // de exports.txt, del layout de opciones o del JSON de salida.
-constexpr uint32_t kAbiVersion = 1;
+constexpr uint32_t kAbiVersion = 2;  // 2: sa_quad_ptr + sa_read_quad (F5.5)
 
 // Índices del array de opciones int32 que escribe el JS (engine/options.ts).
 enum Opt : int {

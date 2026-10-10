@@ -54,3 +54,5 @@ bench/.pydeps/
 bench/dataset/real/manifest.jsonl
 bench/dataset/zxing/
 packages/scanner/test/.cache/
+training/data/synth/
+training/runs/

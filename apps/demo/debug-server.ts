@@ -33,6 +33,14 @@ Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
+    const ua = req.headers.get("user-agent")?.match(/\(([^)]*)\)/)?.[1] ?? "";
+    if (!url.pathname.startsWith("/assets/"))
+      console.log(
+        new Date().toISOString().slice(11, 19),
+        req.method,
+        url.pathname + url.search,
+        ua,
+      );
     if (req.method === "POST" && url.pathname.startsWith("/debug/")) return save(req, url);
     let path = normalize(decodeURIComponent(url.pathname));
     if (path.endsWith("/")) path += "index.html";
@@ -40,6 +48,14 @@ Bun.serve({
     if (!path.startsWith("/") || path.includes("..") || !(await file.exists()))
       return new Response("404", { status: 404 });
     const type = path.endsWith(".wasm") ? "application/wasm" : file.type;
+    // Servida por aquí → modo depuración siempre activo (el token viaja en la página).
+    if (path.endsWith(".html")) {
+      const html = (await file.text()).replace(
+        "<head>",
+        `<head><meta name="qhago-debug" content="${TOKEN}">`,
+      );
+      return new Response(html, { headers: { "content-type": type, "cache-control": "no-store" } });
+    }
     return new Response(file, { headers: { "content-type": type, "cache-control": "no-cache" } });
   },
 });

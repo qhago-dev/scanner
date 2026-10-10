@@ -1,5 +1,9 @@
 // Modo depuración (?debug=<token>, servido por debug-server.ts): logs + fotogramas reales al servidor local.
-const token = new URLSearchParams(location.search).get("debug");
+// El token llega por ?debug= o lo inyecta debug-server.ts en <meta name="qhago-debug">.
+const token =
+  new URLSearchParams(location.search).get("debug") ??
+  document.querySelector<HTMLMetaElement>('meta[name="qhago-debug"]')?.content ??
+  null;
 export const debugOn = !!token;
 const sid = `${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}`;
 const t0 = performance.now();

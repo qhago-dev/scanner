@@ -1,4 +1,4 @@
-import { dropConflicts } from "./conflicts";
+import { dropConflicts, verifyHarder } from "./conflicts";
 import type { Engine, Raster } from "./engine/engine";
 import { encodeOptions } from "./engine/options";
 import { ScanError, throwIfAborted } from "./errors";
@@ -51,8 +51,13 @@ export function checkOptions(o: DecodeAllOptions): void {
 export function readRaster(
   engine: Engine,
   raster: Raster,
-  options: DecodeAllOptions & { returnErrors?: boolean },
-) {
+  options: DecodeAllOptions & { returnErrors?: boolean; noVerify?: boolean },
+): {
+  results: BarcodeResult[];
+  candidates: ReturnType<Engine["read"]>["candidates"];
+  passes: string[];
+  ms: number;
+} {
   checkPixels(raster.width, raster.height, options.maxInputPixels ?? 16e6);
   let out: ReturnType<Engine["read"]>;
   try {
@@ -71,11 +76,23 @@ export function readRaster(
     );
   }
   const requested = options.formats ?? DEFAULT_FORMATS;
-  const results = dropConflicts(
-    out.results
-      .filter((r) => passesValidation(r, options.validateChecksums))
-      .map((r) => normalizeUpc(r, requested)),
-  );
+  const ok = out.results.map((r) => passesValidation(r, options.validateChecksums));
+  let results = out.results.filter((_, i) => ok[i]).map((r) => normalizeUpc(r, requested));
+  if (!options.noVerify) {
+    const passes = out.resultPasses.filter((_, i) => ok[i]);
+    results = verifyHarder(results, passes, raster, (region) => {
+      const v = readRaster(engine, raster, {
+        formats: requested.filter((f) => ["ean_13", "ean_8", "upc_a", "upc_e"].includes(f)),
+        strategy: "thorough",
+        region,
+        validateChecksums: options.validateChecksums,
+        advanced: { tryHarder: false, tryInvert: false, preprocess: { multiscale: true } },
+        noVerify: true,
+      });
+      return v.results;
+    });
+  }
+  results = dropConflicts(results);
   return { results, candidates: out.candidates, passes: out.passes, ms: out.ms };
 }
 

@@ -35,6 +35,8 @@ interface RawCandidate {
 
 export interface EngineOutput {
   results: BarcodeResult[];
+  /** Pasada de la cascada que produjo cada resultado (paralelo a `results`; interno). */
+  resultPasses: string[];
   candidates: DecodeCandidate[];
   passes: string[];
   budgetExceeded: boolean;
@@ -227,6 +229,7 @@ export class Engine {
           confidence: confidenceOf(r.format, r.lineCount),
         };
       }),
+      resultPasses: (json.results ?? []).map((r) => r.pass),
       candidates: (json.candidates ?? []).map((c) => {
         const cp = corners(c.points);
         return { format: c.format, error: c.error, cornerPoints: cp, boundingBox: bbox(cp) };

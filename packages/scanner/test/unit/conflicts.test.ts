@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropConflicts } from "../../src/conflicts";
+import { dropConflicts, verifyHarder } from "../../src/conflicts";
 import type { BarcodeFormat, BarcodeResult } from "../../src/types";
 
 /** Resultado con quad horizontal de x0 a x1 a la altura y (alto 9 px, como devuelve ZXing en 1D). */
@@ -63,5 +63,37 @@ describe("dropConflicts con consenso", () => {
       ],
     } as unknown as BarcodeResult;
     expect(dropConflicts([thin, tall]).map((x) => x.text)).toEqual(["5030159003930"]);
+  });
+});
+
+describe("verifyHarder", () => {
+  const res = (text: string, format: BarcodeFormat = "ean_13") =>
+    ({
+      format,
+      text,
+      boundingBox: { x: 200, y: 500, width: 260, height: 140 },
+      cornerPoints: [],
+    }) as unknown as BarcodeResult;
+  const size = { width: 720, height: 1280 };
+  it("descarta un EAN de 'harder' si una relectura normal da otro número (caso real Android)", () => {
+    const out = verifyHarder([res("2548033204265")], ["harder"], size, () => [
+      res("7501033204265"),
+    ]);
+    expect(out).toEqual([]);
+  });
+  it("conserva si la relectura coincide (EAN-13 ↔ UPC-A con 0 inicial) o no lee nada", () => {
+    expect(
+      verifyHarder([res("0075720003259")], ["x2"], size, () => [res("075720003259", "upc_a")]),
+    ).toHaveLength(1);
+    expect(verifyHarder([res("2548033204265")], ["clahe"], size, () => [])).toHaveLength(1);
+  });
+  it("no relee lo que salió de la pasada 'fast' ni formatos que no son EAN/UPC", () => {
+    let calls = 0;
+    const reread = () => {
+      calls++;
+      return [res("1")];
+    };
+    verifyHarder([res("2548033204265"), res("ABC", "code_128")], ["fast", "harder"], size, reread);
+    expect(calls).toBe(0);
   });
 });

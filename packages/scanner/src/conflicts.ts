@@ -82,3 +82,46 @@ function sameSymbol(qa: readonly Point[], qb: readonly Point[]): boolean {
   const perp = Math.abs(-d.x * a.u.y + d.y * a.u.x);
   return along < 0.4 * len && perp < 0.5 * len;
 }
+
+const VIEW_PADS = [0.6, 1.5];
+const EAN_UPC = new Set<BarcodeResult["format"]>(["ean_13", "ean_8", "upc_a", "upc_e"]);
+
+/** GTIN comparable entre EAN-13 / UPC-A (el 0 inicial) para no tomar como conflicto el mismo código. */
+const gtin = (t: string) => t.replace(/^0+/, "");
+
+/**
+ * EAN/UPC hallados solo por las pasadas "harder" (más líneas, rotación, preproceso): en fotos reales de
+ * envases arrugados ZXing devuelve ahí lecturas falsas con checksum válido de forma consistente en todas
+ * las líneas (también zxing-wasm upstream), mientras que una relectura *normal* ampliada de la zona da el
+ * valor real. Se relee la zona sin "harder" (x1, x2, x0,5) con varios márgenes: si alguna vista da otro
+ * número, el resultado se descarta.
+ * `reread(region)` devuelve las lecturas normales de esa región.
+ */
+export function verifyHarder(
+  results: BarcodeResult[],
+  passes: readonly string[],
+  size: { width: number; height: number },
+  reread: (region: { x: number; y: number; width: number; height: number }) => BarcodeResult[],
+): BarcodeResult[] {
+  return results.filter((r, i) => {
+    if (!EAN_UPC.has(r.format) || (passes[i] ?? "fast") === "fast") return true;
+    const b = r.boundingBox;
+    const long = Math.max(b.width, b.height);
+    // Varias vistas: la lectura falsa aparece o no según el recorte; basta una discrepancia.
+    for (const k of VIEW_PADS) {
+      const pad = k * long;
+      const x = Math.max(0, Math.floor(b.x - pad));
+      const y = Math.max(0, Math.floor(b.y - pad));
+      const region = {
+        x,
+        y,
+        width: Math.min(size.width, Math.ceil(b.x + b.width + pad)) - x,
+        height: Math.min(size.height, Math.ceil(b.y + b.height + pad)) - y,
+      };
+      if (region.width < 8 || region.height < 8) continue;
+      if (reread(region).some((v) => EAN_UPC.has(v.format) && gtin(v.text) !== gtin(r.text)))
+        return false;
+    }
+    return true;
+  });
+}

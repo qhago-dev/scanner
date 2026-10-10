@@ -95,7 +95,7 @@ Evaluación sin reentrenar (el modelo nunca vio fotos reales):
 
 | Motor | Recall | Desenfocadas (n=152) | Lecturas falsas |
 |---|---|---|---|
-| qhago | 76,5 % | 11,8 % | 7 (0,5 %) |
+| qhago | 76,6 % | 11,8 % | 7 (0,5 %) |
 | qhago + detector-v1-lite | **83,9 %** | **32,9 %** | 9 (0,6 %) |
 | zxing-wasm (referencia) | 71,4 % | 5,3 % | 22 (1,6 %) |
 

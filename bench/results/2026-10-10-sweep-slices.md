@@ -30,3 +30,11 @@ Vídeo dev: ×1 79,2 % (igual), ×10 77,4 % (base 75,5 %), p95 2 490 ms (base 2 
 
 La foto `0019-miss` (7750670011839, borrosa) devolvía con balanced/thorough **dos EAN-13 falsos con checksum
 válido** (9238472016651, 3716652077839) → regla de conflictos 1D (`src/conflicts.ts`).
+
+## Tercera prueba en el Android
+
+Frames con escalado p50 130 ms (máx. 605, la multiescala). Nueva lectura falsa con checksum válido en un envase
+arrugado (7501033204265 → 2548033204265, fotos 0059/0062), sin otra lectura con la que entrar en conflicto;
+zxing-wasm upstream la reproduce y `minLineCount` no la evita. Una relectura normal (x2/x0,5) de la zona da el
+valor real según el recorte → `verifyHarder` (2 vistas). public/test: recall 76,6 %, falsas 7, p95 327 ms
+(4 vistas: falsas 6, p95 422 ms).

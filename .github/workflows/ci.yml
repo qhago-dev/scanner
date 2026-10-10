@@ -40,15 +40,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # samples de zxing-cpp para los tests de integración
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
       - uses: actions/download-artifact@v4
         with:
           name: engine-wasm
           path: packages/engine-wasm/out
+      - run: pip install pillow && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
       - run: bun install --frozen-lockfile
+      - run: node packages/scanner/scripts/copy-wasm.mjs
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
+      - run: bunx playwright install --with-deps chromium firefox webkit
+      - run: bun run --filter @qhago/scanner test:browser
+
+  parity:
+    # Paridad WASM ↔ ZXing nativo sobre todos los samples × 4 rotaciones × 3 estrategias (gate G2).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "6.0.2"
+          actions-cache-folder: emsdk-cache
+      - run: pip install pillow && bash packages/engine-wasm/test/parity.sh
 
   license:
     runs-on: ubuntu-latest

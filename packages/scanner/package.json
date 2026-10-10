@@ -1,0 +1,71 @@
+{
+  "name": "@qhago/scanner",
+  "version": "0.0.0",
+  "description": "Barcode & QR scanner for the web, Node and Bun — ZXing-C++ in WebAssembly, multi-frame fusion, optional AI detector.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./dist/browser/ui.js"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "bun": "./dist/node/index.js",
+      "node": "./dist/node/index.js",
+      "browser": "./dist/browser/index.js",
+      "default": "./dist/browser/index.js"
+    },
+    "./wasm/*": "./wasm/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qhago/scanner.git",
+    "directory": "packages/scanner"
+  },
+  "keywords": [
+    "barcode",
+    "qr",
+    "qrcode",
+    "scanner",
+    "zxing",
+    "wasm",
+    "ean",
+    "datamatrix",
+    "pdf417",
+    "barcode-detector",
+    "quagga"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "node scripts/copy-wasm.mjs && tsup && tsc -p tsconfig.build.json && node scripts/copy-wasm.mjs --dist",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run --project node && bun test test/bun",
+    "test:browser": "vitest run --project browser",
+    "test:all": "vitest run"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/node": "^22.10.0",
+    "@vitest/browser": "^3.2.0",
+    "@vitest/coverage-v8": "^3.2.0",
+    "playwright": "^1.55.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

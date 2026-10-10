@@ -58,24 +58,26 @@ exported_functions() {
 link_target() {
   local name="$1" env="$2"; shift 2
   local dest="$OUT/$name"
+  local base="qhago_engine"
+  [[ "$name" == "node" ]] && base="qhago_engine_node"
   mkdir -p "$dest"
   log "Enlazando $name (ENVIRONMENT=$env)…"
   # shellcheck disable=SC2086
   em++ $COMMON_FLAGS -std=c++20 \
     -I "$VENDOR/core/src" -I "$BUILD/zxing/core" -I "$HERE/src" \
-    "$HERE"/src/*.cpp "$@" "$BUILD/zxing/core/libZXing.a" \
+    "$HERE"/src/*.cpp "$@" -I "$HERE/third_party" "$BUILD/zxing/core/libZXing.a" \
     -sMODULARIZE -sEXPORT_ES6 -sEXPORT_NAME=createQhagoEngine -sENVIRONMENT="$env" \
     -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=16MB -sFILESYSTEM=0 -sASSERTIONS=0 \
     -sDYNAMIC_EXECUTION=0 -sINCOMING_MODULE_JS_API=wasmBinary,instantiateWasm,locateFile \
     -sEXPORTED_FUNCTIONS="$(exported_functions),_malloc,_free" \
-    -sEXPORTED_RUNTIME_METHODS=HEAPU8,UTF8ToString \
-    -o "$dest/qhago_engine.mjs"
+    -sEXPORTED_RUNTIME_METHODS=HEAPU8 \
+    -o "$dest/$base.mjs"
   # El glue nunca debe contener top-level await (rompe require(esm) y bundlers).
-  if grep -qE '^\s*await |[;}]\s*await import\(' "$dest/qhago_engine.mjs"; then
+  if grep -qE '^\s*await |[;}]\s*await import\(' "$dest/$base.mjs"; then
     die "$name: el glue contiene top-level await"
   fi
   local raw gz
-  raw=$(wc -c < "$dest/qhago_engine.wasm"); gz=$(gzip -9 -c "$dest/qhago_engine.wasm" | wc -c)
+  raw=$(wc -c < "$dest/$base.wasm"); gz=$(gzip -9 -c "$dest/$base.wasm" | wc -c)
   log "$name: wasm $((raw / 1024)) KB raw, $((gz / 1024)) KB gzip"
   printf '{"target":"%s","rawBytes":%d,"gzipBytes":%d}\n' "$name" "$raw" "$gz" > "$dest/size.json"
 }
@@ -83,8 +85,8 @@ link_target() {
 build_zxing
 # El artefacto node incluye el decoder PNG/JPEG (stb_image) cuando está disponible.
 link_node() {
-  if [[ -f "$HERE/third_party/stb_image_impl.c" ]]; then
-    link_target node node -DQHAGO_WITH_IMAGE_DECODER "$HERE/third_party/stb_image_impl.c"
+  if [[ -f "$HERE/third_party/stb_image_impl.cpp" ]]; then
+    link_target node node -DQHAGO_WITH_IMAGE_DECODER "$HERE/third_party/stb_image_impl.cpp"
   else
     link_target node node
   fi

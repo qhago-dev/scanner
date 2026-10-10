@@ -1,3 +1,11 @@
-# Funciones C exportadas al JS (sin el prefijo _)
-zxing_read_barcode
-zxing_version
+# Funciones C exportadas al JS (sin el prefijo _). Cambiar aquí implica subir kAbiVersion.
+sa_abi_version
+sa_alloc_input
+sa_options_ptr
+sa_read
+sa_read_rgba
+sa_result_json
+sa_decode_image
+sa_image_width
+sa_image_height
+sa_free

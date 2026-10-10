@@ -3,7 +3,7 @@
 > **Experimental, sin publicar** (`"private": true`): no supera el gate G5 — ver [MODEL_CARD.md](./MODEL_CARD.md).
 
 Detector de códigos **opcional** para [`@qhago/scanner`](../scanner). Cuando el motor clásico no lee nada durante
-unos frames, una red pequeña (CenterNet-lite, 0,39 M parámetros, 320×320) localiza los códigos y sus 4 esquinas;
+unos frames, una red pequeña (CenterNet-lite, 0,22 M parámetros, 0,24 GMAC, 320×320) localiza los códigos y sus 4 esquinas;
 el motor rectifica cada región en su resolución original y la vuelve a leer.
 
 ```ts
@@ -29,15 +29,15 @@ También funciona con `decode(image, { workerFactory: aiWorker, plugins: [aiDete
 | `backend` | `"wasm"` | `"webgpu"` / `"auto"` usan el modelo FP16 y el runtime WebGPU |
 | `modelUrl` | modelo del paquete | self-hosting / CDN |
 | `wasmPaths` | el de `onnxruntime-web` | carpeta de los `.wasm` de ORT |
-| `intervalMs` | `300` | mínimo entre inferencias en vídeo (la red cuesta ~100 ms en WASM) |
+| `intervalMs` | `300` | mínimo entre inferencias en vídeo (la red cuesta ~40 ms en WASM, escritorio) |
 | `cache` | `true` | guarda el modelo en Cache API |
 
 ## Peso
 
 | Recurso | Tamaño |
 |---|---|
-| `detector.int8.onnx` (WASM) | ~0,5 MB |
-| `detector.fp16.onnx` (WebGPU) | ~0,8 MB |
+| `detector.int8.onnx` (WASM) | ~0,33 MB |
+| `detector.fp16.onnx` (WebGPU) | ~0,45 MB |
 | runtime ORT WASM | ~3,7 MB gzip |
 | runtime ORT WebGPU | ~6,7 MB gzip |
 

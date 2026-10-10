@@ -15,7 +15,7 @@ export interface AiDetectorOptions {
   /** Carpeta de los .wasm de onnxruntime-web (self-hosting/CDN). Default: la que resuelve onnxruntime-web. */
   wasmPaths?: string;
   /**
-   * Intervalo mínimo entre inferencias en vídeo, en ms. Default 300. La red cuesta ~100 ms por frame en WASM
+   * Intervalo mínimo entre inferencias en vídeo, en ms. Default 300. La red cuesta ~40 ms por frame en WASM
    * (1 hilo, escritorio); sin este límite, el modo "fallback" bajaría los fps justo cuando no hay código.
    */
   intervalMs?: number;

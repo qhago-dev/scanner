@@ -5,12 +5,12 @@
 Hecho en local con la RTX 3060 (decisión del autor: entrenar en local, no en nube):
 - F5.1: `training/data/synth_det.py`, 100 000 imágenes (13 formatos, esquinas exactas, augmentaciones). **Pendiente**: fondos fotográficos CC0/CC-BY y visualizador.
 - F5.2: **bloqueado** por el dataset real de F1 (no existe aún).
-- F5.3: CenterNet-lite propio en lugar de NanoDet-Plus (ver MODEL_CARD); 30 épocas, 1,77 h; mAP@0.5 0,967 en validación sintética. La config se guarda por ejecución (`runs/*/config.json`) en lugar de un YAML. Variante `--head shared` (0,24 GMAC) en entrenamiento para la latencia.
+- F5.3: CenterNet-lite propio en lugar de NanoDet-Plus (ver MODEL_CARD); 30 épocas, 1,77 h; mAP@0.5 0,967 en validación sintética. La config se guarda por ejecución (`runs/*/config.json`) en lugar de un YAML. Variante `--head shared` (0,24 GMAC, 1,26 h) adoptada como modelo del paquete: misma precisión, mitad de latencia (38-47 ms en WASM, escritorio).
 - F5.4: `training/export/export_onnx.py` (opset 17, paridad FP32 4,9e-5, FP16, INT8 QDQ con 200 imágenes de calibración —500 agota 32 GB de RAM con Percentile—; cabezas finales en FP32). Carga verificada en ORT Web WASM (Chromium); WebGPU sin verificar (no hay GPU en el navegador headless).
 - F5.5: `sa_read_quad` (homografía + warp bilineal, ABI 2) con tests de esquinas en EAN/QR.
 - F5.6: `ScannerPlugin`/`PluginRegistry`, `startWorkerHost({ plugins })`, `UNSUPPORTED` sin worker compatible; probado en decode() y en vídeo (Chromium y Firefox).
 - F5.7: `packages/ai` (`aiWorker`, `aiDetector`, worker, letterbox/picos en TS ≡ Python, Cache API, `intervalMs`), ejemplos Vite y webpack (build verificado). Backend por defecto **WASM** (el runtime WebGPU pesa 6,7 MB gzip y el modelo es pequeño).
-- F5.8: **G5 no superado** con proxies sintéticos (+4,4 pp global, +4,6 pp en el subconjunto adverso, esquinas 3,6 %, 77 ms en escritorio). Decisión: no publicar; `"private": true`. Detalle en [MODEL_CARD.md](../../../packages/ai/MODEL_CARD.md).
+- F5.8: **G5 no superado** con proxies sintéticos (lite: +4,9 pp global, +5,3 pp en el subconjunto adverso, esquinas 4,5 % en INT8, 38-47 ms en escritorio). Decisión: no publicar; `"private": true`. Detalle en [MODEL_CARD.md](../../../packages/ai/MODEL_CARD.md).
 - F5.9: model card escrito; publicación descartada hasta pasar G5.
 
 ## F5.1 — Generador sintético v2

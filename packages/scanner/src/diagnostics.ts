@@ -45,7 +45,10 @@ function moduleWorkers(): boolean {
 /** Cada sonda asíncrona tiene 2 s: un informe de diagnóstico nunca debe colgarse (p. ej. permisos en Firefox). */
 function probe<T>(p: Promise<T> | undefined, fallback: T, ms = 2000): Promise<T> {
   if (!p) return Promise.resolve(fallback);
-  return Promise.race([p.catch(() => fallback), new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+  return Promise.race([
+    p.catch(() => fallback),
+    new Promise<T>((r) => setTimeout(() => r(fallback), ms)),
+  ]);
 }
 
 function runtime(): EnvironmentReport["runtime"] {

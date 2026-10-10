@@ -247,12 +247,14 @@ export class Scanner {
   private chooseRoute(): ScannerRoute {
     const r = this.opts.route ?? "auto";
     const workerOk = this.opts.worker !== false && canUseWorker();
-    if (r !== "auto") return !workerOk && r !== "inline" ? "inline" : r;
-    if (!workerOk) return "inline";
     const mstp =
       typeof (globalThis as { MediaStreamTrackProcessor?: unknown }).MediaStreamTrackProcessor ===
-      "function";
-    return mstp && transferableStreams() ? "track-processor" : "frame-callback";
+        "function" && transferableStreams();
+    if (!workerOk) return "inline";
+    // Una ruta forzada que el navegador no soporta (p. ej. track-processor en Firefox) degrada a la siguiente.
+    if (r === "track-processor") return mstp ? r : "frame-callback";
+    if (r !== "auto") return r;
+    return mstp ? "track-processor" : "frame-callback";
   }
 
   private async openTransport(): Promise<void> {

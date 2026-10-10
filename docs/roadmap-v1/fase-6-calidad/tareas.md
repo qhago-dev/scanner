@@ -2,6 +2,18 @@
 
 > Los tests unitarios y de integración se escriben **durante** F2-F4 junto a cada tarea. Esta fase completa lo que falte y monta la infraestructura.
 
+## Estado (2026-10-10)
+
+Hecho en local (commits F6):
+- F6.1: cobertura combinada node + browser (Chromium) + camera = **88 % líneas, 79 % ramas, 85 % funciones**; umbrales en `vitest.config.ts` (80/70/80/80) y `bun run coverage` en CI. Host y sesión del worker se cubren en proceso (puerto falso / Node).
+- F6.2: snapshot de resultados por sample (`test/fixtures/samples-snapshot.json`, 571 imágenes) idéntico en Node y Bun; job `runtimes` con Node 22.14 y 24. **Pendiente**: las 200 reales de `dev` (no hay dataset real).
+- F6.3: cámara simulada en Chromium (nativa) y Firefox/WebKit (shim `fake-camera.ts`); e2e de CDN cross-origin + CSP estricta, Vite dev (con y sin `optimizeDeps.exclude`), ABI distinta, SSR de cada entry, *long tasks* en el main thread, soak de 10 min en el nocturno. Hallazgo corregido: con CSP sin `blob:` el worker se colgaba → ahora `ENGINE_LOAD_FAILED`. **Pendiente**: specs de 2 cámaras/cambio de dimensiones con el shim; WebKit solo en CI (en local falta `libavif16`).
+- F6.4: `check-size.mjs` (entries + escenarios con tree-shaking: `decode` 8,7 KB, `createScanner` 13,4 KB, WASM 319 KB) y `bench/micro.ts` (fast vacío 1280×720 = 0,94× zxing-wasm) con comparación contra la base de `main`. El presupuesto del entry completo pasa de 15 a 17 KB (incluye el glue de 3,5 KB y toda la API).
+- F6.5: libFuzzer + ASan/UBSan (`packages/engine-wasm/fuzz/`), 1 h en el nocturno; fast-check en PR. Hallazgos: 2 propios corregidos (máscara de formatos, warp degenerado) + MicroPDF417 desactivado; NaN→int upstream documentado y suprimido solo en `vendor/`.
+- F6.6: CSP estricta en e2e (`'wasm-unsafe-eval'`, sin `'unsafe-eval'`), guardia de `eval` en `build.sh`, `scripts/check-deps.mjs` (licencias + `bun audit` del cierre publicado).
+- F6.8: axe-core sobre `<qhago-scanner>` sin violaciones. **Pendiente**: revisión manual con VoiceOver/TalkBack.
+- **Pendiente (manual/externo)**: F6.7 matriz de dispositivos reales ([docs/compatibilidad.md](../../compatibilidad.md)); F6.9 `pre enter rc` tras publicar la beta (ver [acciones externas](../../release/acciones-externas.md)).
+
 ## F6.1 — Unit y cobertura
 **Esfuerzo**: 1 d
 - [ ] Completar tests de fusión, tracker, scheduler, validadores, parsers, adaptadores

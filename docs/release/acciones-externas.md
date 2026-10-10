@@ -30,3 +30,20 @@ Preparadas en F0.8; ninguna se ha ejecutado. Orden recomendado:
 ## 6. Dataset privado (F1)
 - [ ] Crear el bucket (R2/S3) con acceso de solo lectura para CI.
 - [ ] Guardar credenciales como secretos `BENCH_DATASET_URL` / `BENCH_DATASET_TOKEN`.
+
+## 7. Beta (F4.8) y RC (F6.9)
+- [ ] Con la API congelada (`changeset pre enter beta` ya hecho en local), mergear "Version Packages" → publica `@beta`.
+- [ ] Ronda manual de la matriz de dispositivos ([docs/compatibilidad.md](../compatibilidad.md)) con la beta.
+- [ ] Después: `bunx changeset pre exit && bunx changeset pre enter rc`, commit y merge → publica `@rc`.
+      No se ha hecho en local para no saltarse la publicación de la beta.
+
+## 8. Upstream ZXing-C++
+- [ ] Abrir el issue de `NormalizedE2EPattern`/`LocalGrid`/`MicroPDFReader` (NaN → int) con el texto preparado en
+      [packages/engine-wasm/fuzz/README.md](../../packages/engine-wasm/fuzz/README.md).
+
+## 9. Fixtures del BarcodeDetector nativo (F4.3)
+- [ ] En Chrome macOS y Chrome Android, abrir `apps/demo/diagnostics.html`, elegir las imágenes de
+      `packages/scanner/test/fixtures/` y guardar los JSON en `packages/scanner/test/fixtures/native/`.
+
+## 10. Entorno local (opcional)
+- [ ] `sudo apt-get install libavif16` para correr WebKit de Playwright en local (CI ya lo instala con `--with-deps`).

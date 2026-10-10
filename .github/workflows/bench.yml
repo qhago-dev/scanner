@@ -37,6 +37,22 @@ jobs:
           name: bench-results
           path: bench/results/nightly
 
+  soak:
+    # F6.3: 10 min de escaneo con la cámara simulada; el heap JS no debe crecer > 10 %.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "6.0.2"
+      - run: bash packages/engine-wasm/build.sh all
+      - run: bun install --frozen-lockfile && node packages/scanner/scripts/copy-wasm.mjs
+      - run: bunx playwright install --with-deps chromium && sudo apt-get install -y ffmpeg
+      - run: cd packages/scanner && bash scripts/make-fake-video.sh && QHAGO_CAMERA_FIREFOX=0 VITE_QHAGO_SOAK_MIN=10 bunx vitest run --project camera test/camera/perf.test.ts
+
   fuzz:
     # F6.5: libFuzzer + ASan/UBSan sobre la ABI del motor, 1 h.
     runs-on: ubuntu-latest

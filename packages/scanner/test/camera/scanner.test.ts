@@ -48,7 +48,11 @@ describe("createScanner con cámara simulada", () => {
       scanner.on("state", (e) => states.push(e.state));
       const got = firstDetect(scanner);
       await scanner.start();
-      expect(scanner.route).toBe(route);
+      const supported =
+        route !== "track-processor" ||
+        typeof (globalThis as { MediaStreamTrackProcessor?: unknown }).MediaStreamTrackProcessor ===
+          "function";
+      expect(scanner.route).toBe(supported ? route : "frame-callback");
       const r = await got;
       expect(r.text).toBe(EAN);
       expect(r.trackId).toBeGreaterThan(0);

@@ -27,6 +27,7 @@ export default defineConfig({
         test: {
           name: "camera",
           include: ["test/camera/**/*.test.ts"],
+          setupFiles: ["test/camera/fake-camera.ts"],
           testTimeout: 60_000,
           browser: {
             enabled: true,
@@ -44,6 +45,12 @@ export default defineConfig({
                 },
                 context: { permissions: ["camera"] },
               },
+              // Firefox: shim de getUserMedia con canvas.captureStream (test/camera/fake-camera.ts).
+              ...(process.env.QHAGO_CAMERA_FIREFOX === "0"
+                ? []
+                : [{ browser: "firefox" as const }]),
+              // WebKit: mismo shim; requiere las dependencias del sistema de Playwright (libavif, etc.).
+              ...(process.env.QHAGO_CAMERA_WEBKIT === "1" ? [{ browser: "webkit" as const }] : []),
             ],
           },
         },

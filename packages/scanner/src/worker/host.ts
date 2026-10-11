@@ -1,10 +1,12 @@
 // Host del worker: decode() y sesiones de escaneo. Se exporta como "@qhago/scanner/worker-host"
 // para que otros paquetes (p. ej. @qhago/ai) compongan su propio worker (F5).
+
 import { configure } from "../config";
 import { decodeInline } from "../core";
 import { isScanError } from "../errors";
 import { browserPlatform } from "../platform-browser";
 import { PluginRegistry, type ScannerPluginFactory } from "../plugins";
+import { Scheduler } from "../scanner/scheduler";
 import { ScannerSession } from "../scanner/session";
 import type { FromWorker, ToWorker } from "./protocol";
 
@@ -19,9 +21,8 @@ interface StreamState {
   paused: boolean;
   srcWidth: number;
   srcHeight: number;
-  minInterval: number;
-  ema: number;
-  last: number;
+  /** Mismo ritmo que el hilo principal (ruta 2): mediana del coste, acotado entre maxFps y 4 fps. */
+  sched: Scheduler;
 }
 
 export interface WorkerHostOptions {
@@ -47,12 +48,13 @@ export function startWorkerHost(options: WorkerHostOptions = {}): void {
       if (done || !frame) return;
       const now = performance.now();
       const session = sessions.get(sid);
-      if (!session || st.paused || st.busy || now - st.last < st.minInterval) {
+      if (!session || st.paused || st.busy || !st.sched.canSend(now)) {
         frame.close();
         continue;
       }
       st.busy = true;
-      st.last = now;
+      st.sched.sent(now);
+      let ms = 0;
       session
         .process(frame, {
           ts: now,
@@ -60,12 +62,14 @@ export function startWorkerHost(options: WorkerHostOptions = {}): void {
           srcHeight: st.srcHeight || frame.displayHeight,
         })
         .then((r) => {
-          st.ema = st.ema ? 0.8 * st.ema + 0.2 * r.ms : r.ms;
-          st.minInterval = Math.max(st.minInterval, st.ema * 1.2);
+          ms = r.ms;
           post({ t: "done", sid, id: -1, ms: r.ms, passes: r.passes });
         })
         .finally(() => {
           frame.close();
+          // Antes: minInterval = max(minInterval, 1,2·EMA), que solo podía crecer: un frame lento (carga del
+          // modelo IA, un barrido) dejaba la cámara a < 1 fps el resto de la sesión (medido en Android).
+          st.sched.done(ms);
           st.busy = false;
         });
     }
@@ -121,9 +125,7 @@ export function startWorkerHost(options: WorkerHostOptions = {}): void {
           paused: false,
           srcWidth: m.srcWidth,
           srcHeight: m.srcHeight,
-          minInterval: 1000 / Math.max(1, m.maxFps),
-          ema: 0,
-          last: 0,
+          sched: new Scheduler(Math.max(1, m.maxFps)),
         };
         streams.set(m.sid, st);
         void pump(m.sid, st);

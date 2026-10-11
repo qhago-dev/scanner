@@ -16,6 +16,16 @@ describe("scheduler", () => {
     for (let i = 0; i < 50; i++) s.done(5000);
     expect(s.fps).toBeCloseTo(4, 5);
   });
+
+  it("un frame lento aislado (carga del modelo IA, un barrido) no frena el ritmo (caso Android)", () => {
+    const s = new Scheduler(15, 4);
+    s.done(4848);
+    for (let i = 0; i < 4; i++) s.done(22);
+    expect(s.fps).toBeCloseTo(15, 0);
+    // escalado periódico caro (1 de cada 4 frames a 650 ms): manda la mediana
+    for (let i = 0; i < 16; i++) s.done(i % 4 === 0 ? 650 : 25);
+    expect(s.fps).toBeCloseTo(15, 0);
+  });
 });
 
 describe("cámara", () => {

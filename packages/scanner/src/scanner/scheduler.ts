@@ -1,8 +1,12 @@
-/** Back-pressure + ritmo adaptativo (F3): 1 frame en vuelo, intervalo ≈ 1,2 × EMA del tiempo de proceso. */
+/**
+ * Back-pressure + ritmo adaptativo (F3): 1 frame en vuelo, intervalo ≈ 1,2 × mediana de los últimos 8 tiempos
+ * de proceso, acotado entre 1/maxFps y 1/minFps. Mediana y no media: los frames de escalado o de IA son caros
+ * a propósito y no deben frenar el ritmo normal.
+ */
 export class Scheduler {
   private inFlight = false;
   private last = -Infinity;
-  private ema = 0;
+  private costs: number[] = [];
   private minInterval: number;
 
   constructor(
@@ -28,8 +32,11 @@ export class Scheduler {
 
   done(ms: number): void {
     this.inFlight = false;
-    this.ema = this.ema ? 0.8 * this.ema + 0.2 * ms : ms;
-    this.minInterval = Math.min(1000 / this.minFps, Math.max(1000 / this.maxFps, this.ema * 1.2));
+    this.costs.push(ms);
+    if (this.costs.length > 8) this.costs.shift();
+    const sorted = [...this.costs].sort((a, b) => a - b);
+    const med = sorted[sorted.length >> 1] as number;
+    this.minInterval = Math.min(1000 / this.minFps, Math.max(1000 / this.maxFps, med * 1.2));
   }
 
   /** Nueva sesión (stop/start, cambio de cámara): un frame en vuelo del worker anterior ya no volverá. */

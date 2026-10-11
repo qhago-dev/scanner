@@ -65,3 +65,6 @@ apps/demo/video/out/
 
 # Capturas de prueba en dispositivo (privadas)
 apps/demo/debug-captures/
+
+# Conjunto device (fotos privadas del dispositivo)
+bench/dataset/device/manifest.jsonl

@@ -34,6 +34,8 @@ export const DATASETS: Record<string, string> = {
   real: join(HERE, "real/manifest.jsonl"),
   /** Datasets públicos reales (ArTe-Lab, KAIST, Muenster): public/fetch.sh + public/import.py. */
   public: join(HERE, "public/manifest.jsonl"),
+  /** Fotos reales del modo depuración con veredicto manual (privado): device/build.py. */
+  device: join(HERE, "device/manifest.jsonl"),
   synthetic: join(HERE, "synthetic/out/manifest.jsonl"),
   "synthetic-video": join(HERE, "synthetic/out/manifest-video.jsonl"),
   zxing: join(HERE, "zxing/manifest.jsonl"),

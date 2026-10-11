@@ -285,7 +285,16 @@ export class ScannerSession {
     sy: number,
     weak = false,
   ): void {
-    const d = this.fusion.observe(t.id, contentKey(r.format, r.bytes), r.format, r.text, now, weak);
+    // Confianza < 1 (≤ 3 líneas de barrido de acuerdo): en fotos reales de envases arrugados todas las
+    // lecturas EAN falsas, incluso de la pasada normal, tenían confianza 0,5-0,75 → también 2 frames.
+    const d = this.fusion.observe(
+      t.id,
+      contentKey(r.format, r.bytes),
+      r.format,
+      r.text,
+      now,
+      weak || r.confidence < 1,
+    );
     const c = r.cornerPoints.map((p) => scalePoint(p, sx, sy)) as [Point, Point, Point, Point];
     const b = r.boundingBox;
     const result: TrackedResult = {

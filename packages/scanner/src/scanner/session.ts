@@ -1,7 +1,11 @@
 // Sesión de escaneo de vídeo (F3): corre en el worker o, como fallback, en el hilo principal.
 import { type Platform, readRaster } from "../core";
+import { readBlurredEan } from "../deblur";
+import { locate1D, type Region1D } from "../deblur/locate";
 import type { Engine, Raster } from "../engine/engine";
 import { isScanError, ScanError } from "../errors";
+import { DEFAULT_FORMATS } from "../formats";
+import { normalizeUpc } from "../gtin";
 import type { ImageInput } from "../input/common";
 import {
   missingPluginError,
@@ -59,6 +63,8 @@ export const SWEEP_DUTY = 0.5;
  */
 export const HEAVY_DUTY = 0.1;
 const HEAVY = 2;
+/** Fracción máxima del tiempo para el lector por deconvolución (~130 ms por paso en el Android). */
+export const DEBLUR_DUTY = 0.3;
 
 function scalePoint(p: Point, sx: number, sy: number): Point {
   return { x: p.x * sx, y: p.y * sy };
@@ -72,6 +78,12 @@ export class ScannerSession {
   /** Momento (ts del frame) a partir del cual se permite el siguiente barrido. */
   private nextSweepAt = -Infinity;
   private nextHeavyAt = -Infinity;
+  /** Lector EAN por deconvolución (fase 9): regiones localizadas y línea siguiente a probar. */
+  private deblurRegions: Region1D[] = [];
+  private deblurAt = -Infinity;
+  private deblurLine = 0;
+  private nextDeblurAt = Number.NEGATIVE_INFINITY;
+  private turn = false;
   private reported = new Set<number>();
   private framesWithoutRead = 0;
   private plugins: Promise<ScannerPlugin[]> | null = null;
@@ -190,10 +202,26 @@ export class ScannerSession {
     // Barrido rotativo cuando no hay nada (ni lecturas ni símbolos sin leer).
     const nothing = frame.results.length === 0 && frame.candidates.length === 0;
     this.emptyFrames = nothing ? this.emptyFrames + 1 : 0;
-    if (nothing && this.emptyFrames >= this.opts.escalateAfterFrames && now >= this.nextSweepAt) {
-      const i = this.sweepIndex++;
-      const zone = SWEEP_ZONES[i % SWEEP_ZONES.length] as Rect;
-      let k = SWEEP_PATTERN[i % SWEEP_PATTERN.length] as number;
+    const sweepDue =
+      nothing && this.emptyFrames >= this.opts.escalateAfterFrames && now >= this.nextSweepAt;
+    // Lector por deconvolución (fase 9): EAN desenfocados que ZXing ve como candidato o ni eso. Corre
+    // cuando lleva unos frames sin leer y con su propio límite de tiempo; sin regiones (relocalizadas
+    // hace < 600 ms) no gasta el turno. Si también toca barrido, se alternan (nunca los dos en un frame).
+    const deblurDue =
+      !readAny &&
+      this.wantsEan() &&
+      this.framesWithoutRead >= this.opts.escalateAfterFrames &&
+      now >= this.nextDeblurAt &&
+      (this.deblurRegions.length > 0 || now - this.deblurAt > 600);
+    let deblurNow = deblurDue;
+    if (deblurDue && sweepDue) {
+      this.turn = !this.turn;
+      deblurNow = this.turn;
+    }
+    if (sweepDue && !deblurNow) {
+      const j = this.sweepIndex++;
+      const zone = SWEEP_ZONES[j % SWEEP_ZONES.length] as Rect;
+      let k = SWEEP_PATTERN[j % SWEEP_PATTERN.length] as number;
       if (k === HEAVY && now < this.nextHeavyAt) k = 0;
       const slice = SWEEP_SLICES[k];
       const region = this.intersect(this.toPx(zone, raster), roi);
@@ -204,6 +232,17 @@ export class ScannerSession {
       if (k === HEAVY) this.nextHeavyAt = now + cost * (1 / HEAVY_DUTY - 1);
       if (r?.results.length) {
         this.trackAndVote(r.results, now, sx, sy, true);
+        readAny = true;
+      }
+    }
+
+    if (deblurNow) {
+      const ts0 = performance.now();
+      const hits = this.deblurStep(raster, roi, now);
+      passes.push("deblur");
+      this.nextDeblurAt = now + (performance.now() - ts0) * (1 / DEBLUR_DUTY - 1);
+      if (hits.length) {
+        this.trackAndVote(hits, now, sx, sy, true);
         readAny = true;
       }
     }
@@ -311,6 +350,38 @@ export class ScannerSession {
     };
     this.reported.add(t.id);
     this.emit({ type: d.kind === "duplicate" ? "track" : d.kind, result });
+  }
+
+  private wantsEan(): boolean {
+    const f = this.opts.formats;
+    return !f || f.includes("ean_13") || f.includes("upc_a");
+  }
+
+  /**
+   * Un paso del lector por deconvolución, repartido entre frames: si las regiones tienen > 600 ms se
+   * relocalizan (ese frame no lee); si no, se prueba una sola línea (alturas 0,5 / 0,3 / 0,7 rotando).
+   * Cada línea aceptada es una lectura de escalado: la fusión exige 2 frames con el mismo número.
+   */
+  private deblurStep(raster: Raster, roi: Rect, now: number): BarcodeResult[] {
+    if (!this.deblurRegions.length || now - this.deblurAt > 600) {
+      this.deblurRegions = locate1D(raster, 1, 320).filter(
+        (g) =>
+          g.cx >= roi.x && g.cy >= roi.y && g.cx <= roi.x + roi.width && g.cy <= roi.y + roi.height,
+      );
+      this.deblurAt = now;
+      return [];
+    }
+    const frac = [0.5, 0.3, 0.7][this.deblurLine++ % 3] as number;
+    try {
+      return readBlurredEan(raster, {
+        regions: this.deblurRegions,
+        fracs: [frac],
+        minVotes: 1,
+        mode: "fast",
+      }).map((r) => normalizeUpc(r, this.opts.formats ?? DEFAULT_FORMATS));
+    } catch {
+      return [];
+    }
   }
 
   private safeRead<T>(

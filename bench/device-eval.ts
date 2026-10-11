@@ -2,12 +2,12 @@
 // bun run device-eval.ts [--split dev|test] [--engines qhago-fast,qhago,qhago+ai] [--json out.json]
 import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { loadManifest } from "./dataset/manifest";
 import { qhagoEngine } from "./engines/qhago";
 import { qhagoAiEngine } from "./engines/qhago-ai";
 import type { Engine } from "./engines/types";
 import { zxingWasmEngine } from "./engines/zxing-wasm";
 import { loadRgba } from "./image";
-import { loadManifest } from "./dataset/manifest";
 
 const { values: a } = parseArgs({
   options: {
@@ -55,7 +55,9 @@ for (const n of names) {
     const bad = (detail[n]?.[s.id]?.got ?? []).filter((g) => !want.has(norm(g)));
     if (bad.length) falses.push(`${s.id}=${bad.join("/")}`);
   }
-  const ms = Object.values(detail[n] ?? {}).map((d) => d.ms).sort((x, y) => x - y);
+  const ms = Object.values(detail[n] ?? {})
+    .map((d) => d.ms)
+    .sort((x, y) => x - y);
   const p = (q: number) => ms[Math.min(ms.length - 1, Math.floor(q * ms.length))]?.toFixed(0);
   console.log(
     `${n.padEnd(16)} ${row.join(" · ")} · falsas ${falses.length} · p50 ${p(0.5)} ms p95 ${p(0.95)} ms`,

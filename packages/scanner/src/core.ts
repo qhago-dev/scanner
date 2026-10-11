@@ -1,4 +1,6 @@
-import { dropConflicts, verifyHarder } from "./conflicts";
+import { contradicts, dropConflicts, verifyHarder } from "./conflicts";
+import { readBlurredEan } from "./deblur";
+import { locate1D, type Region1D } from "./deblur/locate";
 import type { Engine, Raster } from "./engine/engine";
 import { encodeOptions } from "./engine/options";
 import { ScanError, throwIfAborted } from "./errors";
@@ -124,5 +126,88 @@ export async function decodeInline(
   const { results, candidates } = wanted.length
     ? await decodeWithPlugins(engine, raster, (registry as PluginRegistry).resolve(wanted), options)
     : readRaster(engine, raster, options);
-  return options.includeErrors ? { results, candidates } : results;
+  const checked = deblurCrossCheck(raster, results, options);
+  checked.push(...deblurFallback(raster, checked, options));
+  return options.includeErrors ? { results: checked, candidates } : checked;
+}
+
+const EAN_UPC_F: readonly BarcodeFormat[] = ["ean_13", "upc_a", "ean_8", "upc_e"];
+
+/**
+ * Fase 9 (M4): si la cascada no devolvió ningún EAN/UPC y se pidieron, el lector por deconvolución prueba los
+ * códigos 1D desenfocados que ZXing no separa (barras de 1 módulo a ~1 módulo de desenfoque). Solo en
+ * balanced/thorough: en fotos reales del Android sumó lecturas sin ninguna falsa.
+ */
+/**
+ * Verificación cruzada (fotos): un EAN/UPC de la cascada con confianza < 1 (pocas líneas de acuerdo) se relee
+ * con el lector por deconvolución en su zona; si este da otro número con sus umbrales, el de la cascada se
+ * descarta y se devuelve el suyo. En fotos reales de un envase arrugado corrigió 3 de 4 lecturas falsas.
+ */
+export function deblurCrossCheck(
+  raster: Raster,
+  results: BarcodeResult[],
+  options: DecodeOptions,
+): BarcodeResult[] {
+  if ((options.strategy ?? "balanced") === "fast") return results;
+  const requested = options.formats ?? DEFAULT_FORMATS;
+  const out: BarcodeResult[] = [];
+  let located: Region1D[] | null = null;
+  for (const r of results) {
+    if (!EAN_UPC_F.includes(r.format) || r.confidence >= 1) {
+      out.push(r);
+      continue;
+    }
+    // La zona del quad suele ser una sola línea: se usan también las regiones localizadas sobre el resultado.
+    located ??= locate1D(raster, 3);
+    const b = r.boundingBox;
+    const m = Math.max(b.width, b.height) / 2;
+    const near = located.filter(
+      (g) =>
+        g.cx >= b.x - m &&
+        g.cx <= b.x + b.width + m &&
+        g.cy >= b.y - m &&
+        g.cy <= b.y + b.height + m,
+    );
+    const alt = readBlurredEan(raster, { regions: [...near, regionOf(r)] }).map((x) =>
+      normalizeUpc(x, requested),
+    );
+    const other = alt.find((x) => x.text.replace(/^0+/, "") !== r.text.replace(/^0+/, ""));
+    out.push(other && requested.includes(other.format) ? other : r);
+  }
+  return out;
+}
+
+/** Región 1D a partir del quad de un resultado (eje largo = a través de las barras). */
+function regionOf(r: BarcodeResult): Region1D {
+  const [p0, p1, p2, p3] = r.cornerPoints;
+  const cx = (p0.x + p1.x + p2.x + p3.x) / 4;
+  const cy = (p0.y + p1.y + p2.y + p3.y) / 4;
+  const top = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  const side = Math.hypot(p3.x - p0.x, p3.y - p0.y);
+  const [dx, dy, len, thick] =
+    top >= side ? [p1.x - p0.x, p1.y - p0.y, top, side] : [p3.x - p0.x, p3.y - p0.y, side, top];
+  const ux = dx / (len || 1);
+  const uy = dy / (len || 1);
+  const hv = Math.max(thick / 2, 0.15 * len);
+  return { cx, cy, ux, uy, u0: -len / 2, u1: len / 2, v0: -hv, v1: hv, score: 1 };
+}
+
+export function deblurFallback(
+  raster: Raster,
+  results: readonly BarcodeResult[],
+  options: DecodeOptions,
+): BarcodeResult[] {
+  const requested = options.formats ?? DEFAULT_FORMATS;
+  if ((options.strategy ?? "balanced") === "fast") return [];
+  if (!requested.includes("ean_13") && !requested.includes("upc_a")) return [];
+  if (results.some((r) => EAN_UPC_F.includes(r.format))) return [];
+  const reg = options.region;
+  const regions = locate1D(raster, 2).filter(
+    (g) =>
+      !reg ||
+      (g.cx >= reg.x && g.cy >= reg.y && g.cx <= reg.x + reg.width && g.cy <= reg.y + reg.height),
+  );
+  return readBlurredEan(raster, { regions })
+    .map((r) => normalizeUpc(r, requested))
+    .filter((r) => requested.includes(r.format) && !results.some((b) => contradicts(b, r)));
 }

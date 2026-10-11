@@ -13,6 +13,7 @@ SPLIT = {  # sesión → split (test: nunca usada para ajustar)
     "2026-10-10T17-41-16-lnod": "dev",
     "2026-10-10T15-47-32-hoa6": "test",
     "2026-10-10T17-42-18-6jm4": "test",
+    "2026-10-11T22-44-24-noh6": "test",  # tras fase 9 (M1-M4), sin IA
 }
 out = []
 for ses, split in SPLIT.items():

@@ -11,6 +11,6 @@
 - [x] M4 integración en `decode()` (fallback + verificación cruzada) y en la sesión (paso propio, alterna con el barrido). Cajas IA: pendiente
 - [x] M4 validación: `device`, `public` dev/test, vídeo, zxing-cpp; coste por línea
 - [ ] M7 promediado de perfiles entre frames (condicionado a M4)
-- [ ] Guía "escáner para tiendas" (`docs/guias/`): formatos recomendados, consejos de distancia/luz
+- [x] Guía "escáner para tiendas" (`docs/guias/tienda.md`)
 
 Resultados: `bench/results/2026-10-11-fase9-deblur.md`.

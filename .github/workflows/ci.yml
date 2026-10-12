@@ -79,6 +79,31 @@ jobs:
           name: coverage
           path: packages/scanner/coverage/coverage-summary.json
 
+  examples:
+    # F7.3: apps de ejemplo instaladas desde el TARBALL (npm pack), no desde el workspace.
+    needs: wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@v4
+        with:
+          name: engine-wasm
+          path: packages/engine-wasm/out
+      - run: bun install --frozen-lockfile && bun run --filter @qhago/scanner build
+      - run: cd packages/scanner && bunx playwright install --with-deps chromium
+      - run: node apps/tarball/run.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: examples
+          path: apps/tarball/results/last.json
+
   runtimes:
     # F6.2: integración en Node 22 y 24 (Bun ya corre en check).
     needs: wasm

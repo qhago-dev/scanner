@@ -78,3 +78,4 @@ bench/dataset/device/splits.json
 packages/scanner/LICENSE
 packages/*/NOTICE
 packages/*/LICENSE-APACHE-2.0
+apps/tarball/results/

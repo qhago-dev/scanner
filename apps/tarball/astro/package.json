@@ -1,0 +1,12 @@
+{
+  "name": "ex-astro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "@qhago/scanner": "QHAGO_TARBALL",
+    "astro": "^5.13.0"
+  }
+}

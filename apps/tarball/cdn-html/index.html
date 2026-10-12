@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <body>
+    <!-- Como desde jsDelivr: ruta directa a dist/ en otro origen (CDN_ORIGIN lo sustituye el arnés). -->
+    <script type="module">
+      import { decode } from "CDN_ORIGIN/dist/browser/index.js";
+
+      try {
+        const blob = await (await fetch("/fixture.png")).blob();
+        window.__result = (await decode(blob)).map((x) => x.text).join(",");
+      } catch (e) {
+        window.__result = `ERR:${e?.message ?? e}`;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+---
+// Página estática; el escaneo corre en el cliente (script procesado por Astro/Vite).
+---
+<html lang="es">
+  <body>
+    <p id="result">…</p>
+    <script>
+      import { decode } from "@qhago/scanner";
+      (async () => {
+        try {
+          const blob = await (await fetch("/fixture.png")).blob();
+          const t = (await decode(blob)).map((x) => x.text).join(",");
+          document.getElementById("result")!.textContent = t;
+          (window as any).__result = t;
+        } catch (e) {
+          (window as any).__result = `ERR:${(e as Error)?.message ?? e}`;
+        }
+      })();
+    </script>
+  </body>
+</html>

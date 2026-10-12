@@ -1,0 +1,8 @@
+{
+  "name": "ex-node-cli",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@qhago/scanner": "QHAGO_TARBALL"
+  }
+}

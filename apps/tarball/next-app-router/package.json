@@ -1,0 +1,14 @@
+{
+  "name": "ex-next-app-router",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@qhago/scanner": "QHAGO_TARBALL",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  }
+}

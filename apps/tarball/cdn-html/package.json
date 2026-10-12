@@ -1,0 +1,7 @@
+{
+  "name": "ex-cdn-html",
+  "private": true,
+  "dependencies": {
+    "@qhago/scanner": "QHAGO_TARBALL"
+  }
+}

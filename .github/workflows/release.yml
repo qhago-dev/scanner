@@ -44,6 +44,7 @@ jobs:
           bunx changeset status --verbose
           for p in packages/scanner packages/ai; do [ -f "$p/package.json" ] && (cd "$p" && npm publish --dry-run --provenance --access public) || true; done
       - if: github.event_name == 'push'
+        id: changesets
         uses: changesets/action@v1
         with:
           # En modo pre, changeset publish usa el pre-tag (alpha/beta/rc) como dist-tag.
@@ -52,3 +53,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+      # F7.4: artefactos del motor y checksums en la GitHub Release que crea changesets (createGithubReleases).
+      - if: steps.changesets.outputs.published == 'true'
+        id: assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          v=$(node -e 'const p=JSON.parse(process.env.PUBLISHED).find(x=>x.name==="@qhago/scanner");console.log(p?p.version:"")')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          [ -z "$v" ] && exit 0
+          cd packages/scanner/wasm && sha256sum qhago_engine.wasm qhago_engine_node.wasm > SHA256SUMS
+          gh release upload "@qhago/scanner@$v" qhago_engine.wasm qhago_engine_node.wasm SHA256SUMS --clobber
+    outputs:
+      version: ${{ steps.assets.outputs.version }}
+
+  smoke:
+    # F7.4: instalación desde el registro con npm, pnpm, yarn y bun + CDN, sobre la versión recién publicada.
+    needs: release
+    if: needs.release.outputs.version != ''
+    uses: ./.github/workflows/smoke.yml
+    with:
+      spec: "@qhago/scanner@${{ needs.release.outputs.version }}"

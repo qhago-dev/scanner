@@ -1,0 +1,71 @@
+# Smoke tests de un paquete PUBLICADO (F7.4, G7a/G7b): instalación limpia con los 4 gestores y CDN.
+# Uso manual: Actions → Smoke → spec "@qhago/scanner@rc" (o @latest, @1.0.0).
+name: Smoke
+
+on:
+  workflow_call:
+    inputs:
+      spec: { type: string, required: true }
+  workflow_dispatch:
+    inputs:
+      spec: { type: string, required: true, default: "@qhago/scanner@rc" }
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pm: [npm, pnpm, yarn, bun]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+      - run: corepack enable
+      - name: Proyecto limpio + decode()
+        run: |
+          mkdir -p /tmp/smoke && cd /tmp/smoke
+          echo '{"name":"smoke","private":true,"type":"module"}' > package.json
+          for i in 1 2 3 4 5; do   # el registro puede tardar en propagar la versión
+            case "${{ matrix.pm }}" in
+              npm) npm i "${{ inputs.spec }}" && break ;;
+              pnpm) pnpm add "${{ inputs.spec }}" && break ;;
+              yarn) yarn add "${{ inputs.spec }}" && break ;;
+              bun) bun add "${{ inputs.spec }}" && break ;;
+            esac
+            sleep 30
+          done
+          cp "$GITHUB_WORKSPACE/apps/tarball/fixture.jpg" "$GITHUB_WORKSPACE/apps/tarball/node-cli/index.mjs" .
+          out=$(${{ matrix.pm == 'bun' && 'bun' || 'node' }} index.mjs fixture.jpg)
+          echo "$out"
+          echo "$out" | grep -q "RESULT:5901234123457"
+
+  cdn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm i -g playwright@1 && npx playwright install --with-deps chromium
+      - name: cdn-html contra jsDelivr
+        run: |
+          v=$(npm view "${{ inputs.spec }}" version | tail -1)
+          mkdir -p /tmp/cdn && cp apps/tarball/fixture.png /tmp/cdn/
+          sed "s#CDN_ORIGIN#https://cdn.jsdelivr.net/npm/@qhago/scanner@$v#g" apps/tarball/cdn-html/index.html > /tmp/cdn/index.html
+          cd /tmp/cdn && (npx --yes http-server -p 8080 -s &) && sleep 2
+          cat > check.cjs <<'JS'
+          const { chromium } = require(require("child_process").execSync("npm root -g").toString().trim() + "/playwright");
+          (async () => {
+            const b = await chromium.launch(); const p = await b.newPage();
+            for (let i = 0; i < 5; i++) {
+              await p.goto("http://127.0.0.1:8080/");
+              try { await p.waitForFunction(() => window.__result, null, { timeout: 60000 }); break; } catch { await new Promise(r => setTimeout(r, 30000)); }
+            }
+            const r = await p.evaluate(() => window.__result); console.log(r); await b.close();
+            process.exit(r === "5901234123457" ? 0 : 1);
+          })();
+          JS
+          node check.cjs

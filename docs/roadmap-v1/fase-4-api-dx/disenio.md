@@ -4,7 +4,7 @@
 
 | Import | Contenido | Presupuesto gzip (JS) |
 |---|---|---|
-| `@qhago/scanner` | `decode`, `init`, `configure`, `createScanner`, `mapToElement`, `getEnvironmentReport`, tipos, `ScanError` | ≤ 17 KB entry completo (era 15; ajustado en F6.4). Con tree-shaking: `decode` ≤ 10 KB, `createScanner` ≤ 15 KB |
+| `@qhago/scanner` | `decode`, `init`, `configure`, `createScanner`, `mapToElement`, `getEnvironmentReport`, tipos, `ScanError` | ≤ 26 KB entry completo (era 15; 17 en F6.4; 26 en F10 por el lector de desenfoque, ver `scripts/check-size.mjs`). Con tree-shaking: `decode` ≤ 17 KB, `createScanner` ≤ 22 KB. Worker ≤ 20 KB |
 | `@qhago/scanner/worker-host` | host del worker para componer workers de plugins (F5) | (interno del worker) |
 | `@qhago/scanner/polyfill` | `BarcodeDetectorPolyfill`, `installPolyfill` | ≤ 3 KB (+ core) |
 | `@qhago/scanner/quagga-compat` | API estilo Quagga2 | ≤ 3 KB (+ core) |

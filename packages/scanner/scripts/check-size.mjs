@@ -12,14 +12,18 @@ const DIST = join(dirname(fileURLToPath(import.meta.url)), "../dist/browser");
 const KB = 1024;
 const BUDGETS = [
   // Entry completo (todo exportado, incluido el glue de Emscripten, ~3,5 KB). El objetivo inicial de F4 era
-  // 15 KB; se fijó en 17 KB al cerrar F6 con la API completa (scanner + plugins + diagnóstico).
-  { entry: "index.js", max: 17 * KB },
+  // 15 KB; se fijó en 17 KB al cerrar F6 con la API completa (scanner + plugins + diagnóstico). Revisado en F10
+  // (2026-10-12): la fase 9 (ritmo del worker, verificación, conflictos) dejó 18,0 KB y el lector EAN para
+  // desenfoque (+44 pp de recall en fotos desenfocadas) suma ~6 KB en index y en el worker. No se puede diferir con
+  // import() dinámico: rompe a quien usa la librería dentro de su propio worker de Vite (iife; ADR-06,
+  // apps/tarball/vite-user-worker). Medido: index 24,3 · worker 18,5 · decode 15,9 · createScanner 20,1.
+  { entry: "index.js", max: 26 * KB },
   { entry: "polyfill.js", max: 3 * KB, plusCore: true },
   { entry: "quagga-compat.js", max: 3 * KB, plusCore: true },
   { entry: "ui.js", max: 8 * KB, plusCore: true },
   { entry: "parsers.js", max: 6 * KB },
-  { entry: "worker.js", max: 12 * KB },
-  { entry: "worker-host.js", max: 12 * KB },
+  { entry: "worker.js", max: 20 * KB },
+  { entry: "worker-host.js", max: 20 * KB },
   { entry: "qhago_engine.wasm", max: 450 * KB, binary: true },
 ];
 
@@ -50,11 +54,11 @@ for (const b of BUDGETS) {
 }
 // Escenarios con tree-shaking (lo que de verdad llega a una app).
 const SCENARIOS = [
-  { name: "import { decode }", code: "export { decode } from './index.js';", max: 10 * KB },
+  { name: "import { decode }", code: "export { decode } from './index.js';", max: 17 * KB },
   {
     name: "import { createScanner }",
     code: "export { createScanner } from './index.js';",
-    max: 15 * KB,
+    max: 22 * KB,
   },
 ];
 for (const sc of SCENARIOS) {

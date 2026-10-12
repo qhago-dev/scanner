@@ -130,6 +130,8 @@ const CHECKS = {
     }
   },
   "vite-react": async (d) => CHECKS["vite-vanilla"](d),
+  // Worker propio del usuario que importa la librería (Vite: formato iife por defecto, sin code-splitting).
+  "vite-user-worker": async (d) => CHECKS["vite-vanilla"](d),
   webpack5: async (d) => {
     sh("npm", ["run", "build", "--silent"], d);
     writeFileSync(join(d, "dist/index.html"), '<!doctype html><script src="main.js"></script>');

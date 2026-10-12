@@ -6,7 +6,8 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
   version: string;
 };
 
-// Sin import() dinámicos (ADR-06: Vite construye workers en iife). Los chunks compartidos son imports estáticos
+// Sin import() dinámicos (ADR-06: Vite construye workers en iife, también los del usuario que importan esta
+// librería: lo verifica apps/tarball/vite-user-worker). Los chunks compartidos son imports estáticos
 // en el mismo directorio, así que import.meta.url (worker.js, .wasm) sigue resolviendo bien.
 const common: Options = {
   format: ["esm"],

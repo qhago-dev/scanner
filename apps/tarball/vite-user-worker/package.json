@@ -1,0 +1,14 @@
+{
+  "name": "ex-vite-user-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@qhago/scanner": "QHAGO_TARBALL"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

@@ -3,10 +3,13 @@ import {
   type Aggregate,
   aggregate,
   equivalent,
+  FEW_OBJECTS,
   falseMetric,
+  objectCounts,
   pairedBootstrap,
   recallMetric,
   type SampleRun,
+  upper95,
   verdict,
 } from "./metrics";
 
@@ -26,6 +29,13 @@ export const RESEARCH_ONLY = "research-only";
 const pc = (v: number) => (Number.isFinite(v) ? `${(v * 100).toFixed(1)} %` : "—");
 const pp = (v: number) =>
   Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)} pp` : "—";
+/** FP en negativas con la cota superior Clopper-Pearson (0 eventos no es 0 %). */
+const negCell = (g: Aggregate) =>
+  g.negatives
+    ? `${pc(g.negativesFp)} (≤ ${pc(upper95(Math.round(g.negativesFp * g.negatives), g.negatives))})`
+    : "—";
+const objCell = (o: { wins: number; losses: number; ties: number; p: number }) =>
+  `+${o.wins} / −${o.losses} / =${o.ties} (p ${o.p < 0.001 ? "< 0,001" : o.p.toFixed(3)})`;
 const ms = (v: number) => (Number.isFinite(v) ? `${v.toFixed(1)}` : "—");
 /** Mínimo de muestras en un escenario para que tenga gate (README del roadmap). */
 export const MIN_GATE_N = 60;
@@ -67,12 +77,20 @@ export function buildReport(
         scenarios.map((s) => {
           const f = (rs: SampleRun[]) => rs.filter((r) => r.sample.scenarios.includes(s));
           const d = pairedBootstrap(f(baseRuns), f(other), recallMetric);
-          return [s, { ...d, verdict: d.n >= MIN_GATE_N ? verdict(d) : "sin gate (n<60)" }];
+          return [
+            s,
+            {
+              ...d,
+              verdict: d.n >= MIN_GATE_N ? verdict(d) : "sin gate (n<60)",
+              byObject: objectCounts(f(baseRuns), f(other), recallMetric),
+            },
+          ];
         }),
       );
       return {
         engine: e.name,
         recall: { ...recall, verdict: verdict(recall) },
+        byObject: objectCounts(baseRuns, other, recallMetric),
         falseReads: { ...falseR, verdict: verdict(falseR) },
         perScenario,
       };
@@ -96,7 +114,7 @@ export function buildReport(
     "",
     "## Global",
     "",
-    "| Motor | Muestras | Recall (muestra) | Recall (código) | Lecturas falsas | Tasa falsa | FP en negativas | p50 ms | p95 ms | p99 ms |",
+    "| Motor | Muestras | Recall (muestra) | Recall (código) | Lecturas falsas | Tasa falsa | FP en negativas (cota 95 %) | p50 ms | p95 ms | p99 ms |",
     "|---|---|---|---|---|---|---|---|---|---|",
   );
   const rows = engines.flatMap((e) => [
@@ -105,7 +123,7 @@ export function buildReport(
   ]);
   for (const [name, g] of rows) {
     L.push(
-      `| ${name} | ${g.samples} | ${pc(g.recallSample)} | ${pc(g.recallCode)} | ${g.falseReads} | ${pc(g.falseReadRate)} | ${pc(g.negativesFp)} | ${ms(g.p50)} | ${ms(g.p95)} | ${ms(g.p99)} |`,
+      `| ${name} | ${g.samples} | ${pc(g.recallSample)} | ${pc(g.recallCode)} | ${g.falseReads} | ${pc(g.falseReadRate)} | ${negCell(g)} | ${ms(g.p50)} | ${ms(g.p95)} | ${ms(g.p99)} |`,
     );
   }
   L.push(
@@ -149,17 +167,21 @@ export function buildReport(
       "",
       `## Comparaciones pareadas (${base} − otro; IC 95 % bootstrap por objeto)`,
       "",
-      "| vs | Δ recall | IC 95 % | Veredicto | Δ lecturas falsas (otro − qhago) | IC 95 % |",
-      "|---|---|---|---|---|---|",
+      "| vs | Δ recall | IC 95 % | Veredicto | Objetos | MDE de esta comparación | Por objeto (+ / − / =, test de signos) | Δ lecturas falsas (otro − qhago) | IC 95 % |",
+      "|---|---|---|---|---|---|---|---|---|",
     );
     for (const c of comparisons) {
       L.push(
-        `| ${c.engine} | ${pp(c.recall.diff)} | [${pp(c.recall.lo)}, ${pp(c.recall.hi)}] | ${c.recall.verdict} | ${pp(c.falseReads.diff)} | [${pp(c.falseReads.lo)}, ${pp(c.falseReads.hi)}] |`,
+        `| ${c.engine} | ${pp(c.recall.diff)} | [${pp(c.recall.lo)}, ${pp(c.recall.hi)}] | ${c.recall.verdict} | ${c.recall.objects}${c.recall.objects < FEW_OBJECTS ? " ⚠" : ""} | ${pp(c.recall.mde)} | ${objCell(c.byObject)} | ${pp(c.falseReads.diff)} | [${pp(c.falseReads.lo)}, ${pp(c.falseReads.hi)}] |`,
       );
     }
     L.push(
       "",
-      "Por escenario (Δ recall, veredicto; gate solo con n ≥ 60):",
+      `⚠ = menos de ${FEW_OBJECTS} objetos: IC por objeto poco fiable (informativo; el gate sigue la regla n ≥ ${MIN_GATE_N}).`,
+    );
+    L.push(
+      "",
+      "Por escenario (Δ recall, veredicto; objetos; por objeto +/−; gate solo con n ≥ 60):",
       "",
       `| Escenario | ${comparisons.map((c) => c.engine).join(" | ")} |`,
       `|---|${comparisons.map(() => "---").join("|")}|`,
@@ -169,7 +191,9 @@ export function buildReport(
         `| ${s} | ${comparisons
           .map((c) => {
             const d = c.perScenario[s];
-            return d ? `${pp(d.diff)} (${d.verdict})` : "—";
+            return d
+              ? `${pp(d.diff)} (${d.verdict}; ${d.objects} obj${d.objects < FEW_OBJECTS ? " ⚠" : ""}; +${d.byObject.wins}/−${d.byObject.losses})`
+              : "—";
           })
           .join(" | ")} |`,
       );
@@ -184,6 +208,22 @@ export function buildReport(
       ...(restricted ? { publishable } : {}),
       byScenario,
       comparisons,
+      // Detalle por muestra (F10.5): base de bench/diff.ts.
+      samples: Object.fromEntries(
+        engines.map((e) => [
+          e.name,
+          (runs.get(e.name) ?? []).map((r) => ({
+            id: r.sample.id,
+            object: r.sample.object,
+            scenarios: r.sample.scenarios,
+            codes: r.sample.codes.map(({ format, text }) => ({ format, text })),
+            complete: r.sample.complete,
+            detected: r.detected.map(({ format, text }) => ({ format, text })),
+            ms: Math.round(r.ms * 10) / 10,
+            ...(r.error ? { error: r.error } : {}),
+          })),
+        ]),
+      ),
     },
   };
 }

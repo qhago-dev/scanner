@@ -121,8 +121,19 @@ export interface PairedDiff {
   lo: number;
   hi: number;
   n: number;
+  /** Objetos con al menos una muestra en la que la métrica aplica (en recall: objetos con código). */
   objects: number;
+  /** Desviación típica de la distribución bootstrap de la diferencia. */
+  se: number;
+  /**
+   * "MDE de esta comparación" = 2,8·se (80 % de potencia, α = 0,05). Informativo: con motores casi idénticos el se
+   * es pequeño y NO es la potencia para 5 pp de F1.9.
+   */
+  mde: number;
 }
+
+/** Por debajo de este número de objetos el IC por objeto es poco fiable (aviso, no cambia el veredicto). */
+export const FEW_OBJECTS = 30;
 
 /**
  * Diferencia pareada A − B de una métrica por muestra (1/0), con IC 95 % por bootstrap
@@ -171,7 +182,19 @@ export function pairedBootstrap(
     dist.push(mean(pick));
   }
   dist.sort((x, y) => x - y);
-  return { diff, lo: pct(dist, 2.5), hi: pct(dist, 97.5), n, objects: keys.length };
+  const m = dist.reduce((s, v) => s + v, 0) / (dist.length || 1);
+  const se = dist.length
+    ? Math.sqrt(dist.reduce((s, v) => s + (v - m) * (v - m), 0) / dist.length)
+    : Number.NaN;
+  return {
+    diff,
+    lo: pct(dist, 2.5),
+    hi: pct(dist, 97.5),
+    n,
+    objects: keys.length,
+    se,
+    mde: 2.8 * se,
+  };
 }
 
 /** Veredictos del README del roadmap: "no peor" = lo ≥ −2 pp; "mejor" = lo > 0. */
@@ -185,3 +208,84 @@ export function verdict(d: PairedDiff): "mejor" | "no peor" | "peor" | "sin dato
 export const recallMetric = (s: SampleScore) => (s.negative ? null : s.allFound ? 1 : 0);
 export const falseMetric = (s: SampleScore) =>
   s.reads > 0 || s.negative ? (s.falseReads > 0 ? 1 : 0) : null;
+
+/** log C(n, k) por suma de logaritmos (n pequeño-medio: test de signos, Clopper-Pearson). */
+function logChoose(n: number, k: number): number {
+  let s = 0;
+  for (let i = 1; i <= k; i++) s += Math.log(n - k + i) - Math.log(i);
+  return s;
+}
+
+/** P(X ≤ k) con X ~ Bin(n, p). */
+export function binomCdf(k: number, n: number, p: number): number {
+  if (k < 0) return 0;
+  if (k >= n) return 1;
+  if (p <= 0) return 1;
+  if (p >= 1) return 0;
+  let s = 0;
+  for (let i = 0; i <= k; i++)
+    s += Math.exp(logChoose(n, i) + i * Math.log(p) + (n - i) * Math.log(1 - p));
+  return Math.min(1, s);
+}
+
+/** Test de signos exacto bilateral: p de observar un reparto tan desigual como `wins` vs `losses` con p = 0,5. */
+export function signTest(wins: number, losses: number): number {
+  const n = wins + losses;
+  if (n === 0) return 1;
+  const k = Math.min(wins, losses);
+  return Math.min(1, 2 * binomCdf(k, n, 0.5));
+}
+
+/** Cota superior Clopper-Pearson al 95 % (bilateral) de una tasa con k eventos en n (0/300 → ~1,2 %). */
+export function upper95(k: number, n: number): number {
+  if (n === 0) return Number.NaN;
+  if (k >= n) return 1;
+  // p tal que P(X ≤ k | n, p) = 0,025 (bisección: la CDF decrece con p)
+  let lo = k / n;
+  let hi = 1;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (binomCdf(k, n, mid) > 0.025) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+
+export interface ObjectCounts {
+  /** Objetos en los que A suma más aciertos que B (neto de sus muestras). */
+  wins: number;
+  losses: number;
+  ties: number;
+  /** Test de signos exacto bilateral sobre los objetos discordantes. */
+  p: number;
+}
+
+/**
+ * Comparación por OBJETO (F10.5): cada objeto se resume en gana / pierde / empata según Σ (A − B) de sus
+ * muestras. Las muestras de un objeto (variantes de una foto, varias fotos de un producto) no son independientes.
+ */
+export function objectCounts(
+  a: SampleRun[],
+  b: SampleRun[],
+  metric: (s: SampleScore) => number | null,
+): ObjectCounts {
+  const byId = new Map(b.map((r) => [r.sample.id, r]));
+  const net = new Map<string, number>();
+  for (const ra of a) {
+    const rb = byId.get(ra.sample.id);
+    if (!rb) continue;
+    const ma = metric(scoreSample(ra));
+    const mb = metric(scoreSample(rb));
+    if (ma === null || mb === null) continue;
+    net.set(ra.sample.object, (net.get(ra.sample.object) ?? 0) + ma - mb);
+  }
+  let wins = 0;
+  let losses = 0;
+  let ties = 0;
+  for (const v of net.values()) {
+    if (v > 0) wins++;
+    else if (v < 0) losses++;
+    else ties++;
+  }
+  return { wins, losses, ties, p: signTest(wins, losses) };
+}

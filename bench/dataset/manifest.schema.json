@@ -75,6 +75,9 @@
     "object": { "type": "string", "description": "Objeto físico: agrupa splits y bootstrap" },
     "split": { "enum": ["dev", "test", "holdout"] },
     "privacyReviewed": { "type": "boolean" },
-    "derivedFrom": { "type": "object", "description": "Muestra derivada (F10.3): id de origen y transformación" }
+    "derivedFrom": {
+      "type": "object",
+      "description": "Muestra derivada (F10.3): id de origen y transformación"
+    }
   }
 }

@@ -1,6 +1,6 @@
 # Qhago Scanner
 
-> **Estado: alpha, en desarrollo.** La API puede cambiar. No hay versión estable publicada.
+> **Estado: release candidate en preparación.** API congelada (`packages/scanner/api/public-api.md`); falta publicar en npm.
 
 Librería de escaneo de códigos de barras y QR para **navegador, Node y Bun**, pensada como alternativa moderna a QuaggaJS:
 
@@ -10,10 +10,22 @@ Librería de escaneo de códigos de barras y QR para **navegador, Node y Bun**, 
 - Preproceso clásico (contraste local, multiescala) y, de forma opcional, un **detector IA** (`@qhago/ai`).
 - Polyfill de `BarcodeDetector` y capa de compatibilidad con Quagga2.
 
-## Objetivos (todavía no medidos)
+## Resultados medidos
 
-Superar a Quagga2 en tasa de lectura, latencia y formatos, e igualar o superar a `zxing-wasm` y a `BarcodeDetector` nativo, sin aumentar las lecturas falsas.
-**Este README no publica cifras de rendimiento**: solo se citarán resultados del benchmark reproducible de `bench/`, con fecha y commit.
+Benchmark reproducible de `bench/` (2026-10-12, commit `f686758`, split `test` de fotos públicas reales EAN-13/EAN-8 de
+ArTe-Lab, KAIST y Muenster; i9-12900H, Bun). Informe: [`bench/results/f10-cierre/`](./bench/results/f10-cierre/).
+
+| Motor | Lee | Lecturas falsas | Desenfocadas | p50 |
+|---|---|---|---|---|
+| **qhago** (`balanced`) | **80,9 %** | **0** de 818 | **59,4 %** | 20 ms |
+| qhago + detector IA (experimental) | 87,0 % | 1 | 62,3 % | 26 ms |
+| zxing-wasm 3.1.5 | 71,9 % | 14 | 7,2 % | 17 ms |
+
+qhago − zxing-wasm: **+9,0 pp** (IC 95 % [+5,5; +12,6], comparación pareada por objeto). Sin las fotos de Muenster
+(licencia solo de investigación): qhago 74,0 %, zxing-wasm 62,6 %. Fotos > 4 MP: la cola llega a p95 ≈ 0,5 s y
+p99 ≈ 0,9 s en escritorio (ver la guía de archivos). El split `test` ya se había usado antes en el desarrollo: es un
+control de regresión, no una estimación ciega; la validación con fotos propias del dispositivo está pendiente
+(`docs/guias/captura-device.md`). Metodología y resto de conjuntos: `bench/README.md` y el sitio de docs.
 
 ## Estructura
 
@@ -25,6 +37,8 @@ apps/demo              Demo web y herramienta de captura
 bench/                 Benchmark contra competidores
 training/              Entrenamiento del detector
 docs/roadmap-v1/       Roadmap SDD (requerimientos, diseño y tareas por fase)
+docs-site/             Sitio de documentación (VitePress + TypeDoc)
+apps/tarball/          Apps de ejemplo verificadas contra el tarball publicable
 ```
 
 ## Desarrollo

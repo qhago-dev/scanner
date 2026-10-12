@@ -82,3 +82,4 @@ apps/tarball/results/
 docs-site/api/
 docs-site/.vitepress/dist/
 docs-site/.vitepress/cache/
+bench/results/f10-cierre/*.json

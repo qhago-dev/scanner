@@ -12,3 +12,5 @@ Todas las cifras de la documentación salen de `bench/` (reproducible, con fecha
   del dispositivo. Fuentes y licencias en `bench/dataset/SOURCES.md`.
 
 <!--@include: ../bench/results/2026-10-12-f10-baseline.md-->
+
+<!--@include: ../bench/results/2026-10-12-f10-cierre.md-->

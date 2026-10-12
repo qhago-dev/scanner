@@ -44,3 +44,4 @@ Las cifras de `public` de arriba usan el split anterior (dev 765 / test 1840). D
 (1288 / 818 / 499) y no son comparables fila a fila. La línea base nueva se mide en F10.L sobre el dev nuevo.
 
 Línea base nueva (F10.L, dev): [`2026-10-12-f10-baseline.md`](./2026-10-12-f10-baseline.md).
+Cierre F10 (test, control de regresión): [`2026-10-12-f10-cierre.md`](./2026-10-12-f10-cierre.md).

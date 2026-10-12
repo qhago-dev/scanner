@@ -40,7 +40,7 @@ Orden: A completo → F10.L (línea base) → B8 → B10 (si procede) → B7 →
 
 ## Cierre
 
-- [ ] **F10.C** `public/test` con `--reason "Cierre F10"` (+ `public-neg`/`public-blur` test); `device/test` solo si hay
+- [x] **F10.C** `public/test` con `--reason "Cierre F10"` (+ `public-neg`/`public-blur` test); `device/test` solo si hay
   captura nueva; informe `results/<fecha>-f10-cierre.md`; fila de la fase en el README del roadmap; `baseline.md`.
 
 ## Acciones del autor

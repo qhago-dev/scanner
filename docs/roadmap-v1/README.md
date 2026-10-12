@@ -99,10 +99,10 @@ La v1.0.0 está lista para publicar cuando **todos** estos puntos están en verd
 | 4 | [API pública y DX](./fase-4-api-dx/) | API congelada, polyfill, compat Quagga, UI, parsers | F3 | 5-6 d | pre-tag `beta` | Hecha (fixtures nativos y publicación beta pendientes) |
 | 5 | [Detector IA opcional](./fase-5-ia/) | `@qhago/ai` (si pasa G5) | F5.1-F5.4: F1 · F5.5+: F4 | 14-20 d + GPU en cloud | `@qhago/ai@0.x` | Implementada; G5 no superado (sin datos reales) → no se publica |
 | 6 | [Calidad y rendimiento](./fase-6-calidad/) | Tests, e2e, matriz de navegadores, presupuestos, fuzzing | F2-F4 (continuo) | 5-7 d | pre-tag `rc` | Hecha en local (matriz de dispositivos y `rc` pendientes) |
-| 7 | [Documentación y release](./fase-7-release/) | Docs, ejemplos, publicación 1.0 | F4, F6 | 4-5 d | `1.0.0` | Pendiente |
+| 7 | [Documentación y release](./fase-7-release/) | Docs, ejemplos, publicación 1.0 | F4, F6 | 4-5 d | `1.0.0` | En curso: F7.1-F7.6 hechas en local; publicación (F7.7) pendiente del autor |
 | 8 | [Post-1.0](./fase-8-post-1.0/) | React/Vue, Capacitor, RN, nativo | F7 | — | `1.x` | Pendiente |
 | 9 | [Escáner para tiendas](./fase-9-tienda/) | Ritmo del worker, IA acotada, lector deblur-EAN | F3 | — | — | Hecha (M7 pendiente) |
-| 10 | [Métricas fiables y mejoras medibles](./fase-10-metricas/) | Splits con holdout, negativas y desenfoque derivados, `device` v2, latencia; IA → deblur, EAN-8, cola de latencia | F9 | 9-10 d | — | En curso |
+| 10 | [Métricas fiables y mejoras medibles](./fase-10-metricas/) | Splits con holdout, negativas y desenfoque derivados, `device` v2, latencia; IA → deblur, EAN-8, cola de latencia | F9 | 9-10 d | — | Hecha ([cierre](../../bench/results/2026-10-12-f10-cierre.md); captura `device` v2 pendiente) |
 
 ```
 F0 ──► F1 ──────────────(G2, G3 necesitan F1)─────────────► F5.1-F5.4 (entrenamiento)

@@ -56,3 +56,13 @@ Preparadas en F0.8; ninguna se ha ejecutado. Orden recomendado:
 - [ ] Repartir productos en `bench/dataset/device/splits.json` y capturar según [docs/guias/captura-device.md](../guias/captura-device.md).
 - [ ] `bun run bench/coverage.ts --dataset device --strict` en verde (hoy: 4 productos en dev, 0 en test).
 - [ ] Clips reales cortos (5-10 s, mano en movimiento) para retomar M7 (promediado de perfiles entre frames).
+
+## 13. Sitio de docs (F7.5)
+- [ ] Activar GitHub Pages (Source: GitHub Actions) y apuntar el dominio `qhago.dev` (los `ScanError.docsUrl` usan
+      `https://qhago.dev/docs/errors#…`). Sin dominio propio, lanzar `docs.yml` a mano con base `/<repo>/docs/`.
+- [ ] Probar el inicio rápido con alguien que no conozca el proyecto (criterio de F7.5).
+
+## 14. Camino a 1.0 (F7.7)
+- [ ] Publicar la beta (sección 7) y, tras la matriz de dispositivos, el RC (`pre exit` → `pre enter rc`).
+- [ ] Con el RC publicado: el job `smoke` (npm, pnpm, yarn, bun y jsDelivr) debe quedar en verde → gate G7a.
+- [ ] `bunx changeset pre exit`, merge de "Version Packages" → `1.0.0` en `latest`; smoke contra `@latest` → G7b.

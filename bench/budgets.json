@@ -1,5 +1,43 @@
 {
   "_doc": "Presupuestos de latencia por hardware (F10.6). Valores = mediana de 3 ejecuciones de la línea base × 1,10, por motor; se fijan con `bun run budget.ts --set` en F10.L. Hasta entonces: vacío (informativo).",
-  "_cpu": { "dev-local": "i9-12900H" },
-  "dev-local": {}
+  "_cpu": {
+    "dev-local": "i9-12900H"
+  },
+  "dev-local": {
+    "public/dev": {
+      "qhago": {
+        "p95": 577.6,
+        "p99": 1072.5
+      },
+      "qhago+ai": {
+        "p95": 664.1,
+        "p99": 1459.7
+      },
+      "zxing-wasm": {
+        "p95": 201.9,
+        "p99": 279.1
+      }
+    },
+    "public-blur/dev": {
+      "qhago": {
+        "p95": 838.8,
+        "p99": 1025.6
+      },
+      "qhago+ai": {
+        "p95": 1235.5,
+        "p99": 2044.6
+      },
+      "zxing-wasm": {
+        "p95": 213.9,
+        "p99": 251.7
+      }
+    },
+    "synthetic-video/dev@x5": {
+      "qhago": {
+        "framesOver150Pct": 8.6,
+        "frameP95": 316.7,
+        "ttfrP50": 1336.6
+      }
+    }
+  }
 }

@@ -42,6 +42,7 @@ bench/dataset/real/images/
 bench/dataset/real/videos/
 bench/dataset/synthetic/out/
 bench/results/raw/
+bench/results/f10-baseline/
 e2e/fixtures/videos/
 
 # Capturas de la demo

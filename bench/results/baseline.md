@@ -42,3 +42,5 @@ Con la verificación de EAN/UPC hallados solo con "harder" (2 vistas): recall 76
 
 Las cifras de `public` de arriba usan el split anterior (dev 765 / test 1840). Desde F10.1 hay dev / test / holdout
 (1288 / 818 / 499) y no son comparables fila a fila. La línea base nueva se mide en F10.L sobre el dev nuevo.
+
+Línea base nueva (F10.L, dev): [`2026-10-12-f10-baseline.md`](./2026-10-12-f10-baseline.md).

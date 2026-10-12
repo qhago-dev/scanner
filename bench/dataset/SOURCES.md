@@ -42,3 +42,5 @@ Sesgos conocidos:
   `complete: false`) → `public/neg-exclude.txt`.
 - `public-blur`: el gaussiano coincide con el modelo del lector deblur (por eso las variantes disco/movimiento y el
   control con `defocus` real y `device`). σ nominal: el desenfoque propio de la foto se suma.
+- Calibración (F10.L): `blur-0.9`, `blur-1.2` y `disk-0.9` saturan (0 % con todos los motores). Solo `blur-0.6` y
+  `motion-0.9` discriminan; para una iteración posterior, σ 0,4-0,7.

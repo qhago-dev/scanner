@@ -28,6 +28,10 @@ input.addEventListener("change", async () => {
   `INVALID_INPUT`; reduce la imagen antes (`createImageBitmap(file, { resizeWidth: 4000 })`) o sube el límite fuera de iOS.
 - Si sabes dónde está el código, pasa `region` (píxeles de la imagen): es más rápido y evita falsos positivos.
 - `timeBudgetMs` corta la cascada si una imagen tarda demasiado (útil en lotes).
+- Latencia con fotos de cámara a resolución completa (> 4 MP, `balanced`, escritorio): p50 ~20 ms, pero la cola llega a
+  p95 ~500 ms y p99 ~900 ms cuando la segunda pasada recorre la imagen entera (`bench/results/2026-10-12-f10-baseline.md`).
+  Si la latencia importa más que leer códigos pequeños, reduce la foto a ~1600 px de lado antes de `decode()`
+  (`createImageBitmap(file, { resizeWidth: 1600 })`) o fija `timeBudgetMs`.
 
 ## Lotes
 

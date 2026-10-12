@@ -32,7 +32,10 @@ Orden: A completo → F10.L (línea base) → B8 → B10 (si procede) → B7 →
 - [ ] ~~**F10.10** deblur EAN-8 en `decode()`~~ — **no se implementa**: brecha +4,5 / +6,9 pp < 10 pp (F10.L) · 2,5 d · `deblur/ean.ts`, `span.ts`, `index.ts`, `core.ts`
   - [ ] Refactor `Symbology` con EAN-13 idéntico (fixtures + snapshot)
   - [ ] EAN-8: tests σ 0,3-1,2, invertido, ruido, negativos; 0 EAN-8 en fotos EAN-13; changeset
-- [ ] **F10.7** Latencia de cola · 1 d · `bench/profile-decode.ts`, `core.ts`, `types.ts` (JSDoc)
+- [x] **F10.7** Latencia de cola · 1 d · `bench/profile-decode.ts`, `core.ts`, `types.ts` (JSDoc) — **cerrada sin cambio
+  de motor**: perfilado hecho (cascada 60-78 % de la cola, fotos > 4 MP); B7.P no aprobada en revisión (multi-código,
+  WASM); objetivo −30 % p99 no alcanzable en esta fase; guía de archivos actualizada
+  - [ ] ~~B7.P pirámide para fotos > 1600 px~~ — no aprobada en revisión (ver diseño)
   - [ ] Perfilado; candidatas una a una; tests con reloj inyectado; changeset
 
 ## Cierre

@@ -178,3 +178,38 @@ Se implementa solo si F10.L muestra la brecha (ver requerimiento). La sesión de
      JSDoc + changeset.
    - **`verifyHarder`** acotado si el perfilado lo muestra en la cola.
 3. Cada candidata se mide sola con los criterios de B.
+
+## B7.P · Pirámide para fotos grandes (ampliación v4, tras F10.L)
+
+Evidencia (`profile-decode.ts`, `public/dev`): la cola (≥ p95) es la cascada del motor (60 %) sobre fotos > 4 MP
+(47 de 65). De esas 65: 44 se leen en la 2.ª pasada (`harder`) y son lentas solo por el tamaño (base de hasta
+2560 px); 17 no se leen tras las 4 pasadas; 2 se leen en `clahe`.
+
+Diseño (solo `decode()`, `balanced`, raster con lado mayor > 1600 px; `fast`, `thorough`, `region` y la cámara no cambian):
+
+1. **Etapa 1**: `readRaster` con `maxSide` = 1280 (la cascada `balanced` completa sobre la copia reducida; el motor
+   ya reescala y devuelve coordenadas en el raster original).
+2. Si la etapa 1 devuelve resultados → se usan (pasan por `verifyHarder`, conflictos y deblur como siempre).
+3. Si no → **etapa 2**: `fast` + `harder` sobre la base de 2560 px (sin `inverted`/`clahe`, que ya se probaron en la
+   etapa 1), con `returnErrors` igual que la llamada original; candidatos de ambas etapas se unen.
+4. `maxSide` es un campo interno de `EngineCallOptions` (no público). `timeBudgetMs` del usuario se respeta en las dos
+   etapas (el tiempo de la etapa 1 se descuenta).
+
+Coste esperado: lecturas en `harder` ≈ ¼; fallos: 4 pasadas de 2560 → 4 de 1280 + 2 de 2560 (≈ −40 %).
+Riesgo: códigos pequeños (< 1,5 px/módulo tras reducir) que hoy lee `harder` a 2560: la etapa 2 los cubre. Las
+lecturas solo con `inverted`/`clahe` a 2560 se pierden si a 1280 no salen (2 en la cola de `public/dev`): se mide.
+
+Criterios: los de B (requerimiento) más el objetivo de B7 (p99 −30 % en `public/dev` y `public-blur/dev`).
+
+**Revisión (2026-10-12): NO APROBADO → no se implementa.** Bloqueantes: (1) `decode()` es multi-código por defecto
+(`maxSymbols` 255) y una etapa 1 que corta con el primer resultado perdería en silencio códigos pequeños de la misma
+foto; evitarlo exige correr siempre la etapa 2, lo que anula la ganancia; (2) la etapa 2 "fast + harder sin
+inverted" no se puede expresar con las opciones del motor (`tryInvert` controla ambas cosas): requiere una opción
+nueva en C++ y recompilar el WASM. Además, la estimación revisada (≈ −21 % de p99, la cascada es el 60 % de la cola y
+las 17 fotos no leídas siguen pagando el resto) no alcanza el objetivo.
+
+**Cierre de B7**: objetivo no alcanzable en esta fase. La cola afecta a `decode()` con fotos > 4 MP en escritorio; la
+cámara (frames ≤ 1280 px) se rige por las métricas de vídeo y está dentro de presupuesto. Se documenta en la guía de
+archivos cómo acotarla (reducir a ~1600 px o `timeBudgetMs`). Las candidatas del diseño original (límite de trabajo de
+deblur, `verifyHarder`) actúan sobre ≤ 40 % de la cola y tampoco lo alcanzan: no se implementan. Pendiente para una
+fase posterior: pirámide en el motor C++ con pasada de completado multi-código.

@@ -20,9 +20,18 @@ async function compile(): Promise<WebAssembly.Module> {
         : new Uint8Array(await (await fetch(u)).arrayBuffer());
     return await WebAssembly.compile(bytes);
   } catch (e) {
-    throw new ScanError("ENGINE_LOAD_FAILED", `No se pudo cargar el motor desde ${String(url)}`, {
-      cause: e,
-    });
+    // Empaquetadores para Node/Bun (bun build, esbuild, ncc…) no copian el .wasm de new URL(…, import.meta.url).
+    const missing = (e as NodeJS.ErrnoException)?.code === "ENOENT" && !cfg.wasmUrl;
+    throw new ScanError(
+      "ENGINE_LOAD_FAILED",
+      `No se pudo cargar el motor desde ${String(url)}` +
+        (missing
+          ? ". Si empaquetaste la app (bun build, esbuild, ncc…), copia" +
+            " node_modules/@qhago/scanner/wasm/qhago_engine_node.wasm junto al bundle o indica la ruta con" +
+            " configure({ wasmUrl })."
+          : ""),
+      { cause: e },
+    );
   }
 }
 

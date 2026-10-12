@@ -5,7 +5,7 @@
   "scripts": {
     "bench": "bun run cli.ts",
     "typecheck": "tsc --noEmit -p .",
-    "test": "bun test metrics.test.ts guard.test.ts",
+    "test": "bun test metrics.test.ts guard.test.ts report.test.ts",
     "micro": "bun run micro.ts"
   },
   "dependencies": {

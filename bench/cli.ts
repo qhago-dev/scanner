@@ -1,5 +1,5 @@
 // bun run bench -- --dataset synthetic|zxing|real|<ruta> --split dev|test|holdout --engines qhago,zxing-wasm,zxing-js,quagga2
-//                  [--limit N] [--reason "…"] [--holdout-ok] [--out bench/results]
+//                  [--limit N] [--reason "…"] [--holdout-ok] [--exclude-license research-only] [--out bench/results]
 import { mkdirSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
@@ -25,6 +25,7 @@ const { values: a } = parseArgs({
     limit: { type: "string" },
     reason: { type: "string" },
     "holdout-ok": { type: "boolean", default: false },
+    "exclude-license": { type: "string" },
     out: { type: "string", default: join(import.meta.dir, "results") },
   },
 });
@@ -57,7 +58,13 @@ guardSplit({
   out: a.out ?? "results",
 });
 
-const all = loadManifest(a.dataset).filter((s) => s.split === a.split && s.kind === "image");
+const excluded = (a["exclude-license"] ?? "")
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
+const all = loadManifest(a.dataset).filter(
+  (s) => s.split === a.split && s.kind === "image" && !excluded.includes(s.license),
+);
 const samples = a.limit ? all.slice(0, Number(a.limit)) : all;
 if (!samples.length) {
   console.error(`Sin muestras en ${a.dataset}/${a.split}`);
@@ -104,6 +111,7 @@ const meta = {
   cpu: cpus()[0]?.model ?? "?",
   runtime: `Bun ${Bun.version}`,
   ...(a.reason ? { reason: a.reason } : {}),
+  ...(excluded.length ? { excludedLicenses: excluded } : {}),
 };
 const { markdown, json } = buildReport(meta, engines, runs);
 const out = a.out ?? "results";

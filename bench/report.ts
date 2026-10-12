@@ -18,7 +18,10 @@ export interface BenchMeta {
   cpu: string;
   runtime: string;
   reason?: string;
+  excludedLicenses?: string[];
 }
+
+export const RESEARCH_ONLY = "research-only";
 
 const pc = (v: number) => (Number.isFinite(v) ? `${(v * 100).toFixed(1)} %` : "—");
 const pp = (v: number) =>
@@ -40,10 +43,15 @@ export function buildReport(
     ...new Set([...runs.values()].flat().flatMap((r) => r.sample.codes.map((c) => c.format))),
   ].sort();
   const global: Record<string, Aggregate> = {};
+  // F10.2: cifra "publicable" sin las muestras research-only (ADR-09), si las hay.
+  const restricted = [...runs.values()].flat().some((r) => r.sample.license === RESEARCH_ONLY);
+  const publishable: Record<string, Aggregate> = {};
   const byScenario: Record<string, Record<string, Aggregate>> = {};
   for (const e of engines) {
     const rs = runs.get(e.name) ?? [];
     global[e.name] = aggregate(rs);
+    if (restricted)
+      publishable[e.name] = aggregate(rs.filter((r) => r.sample.license !== RESEARCH_ONLY));
     byScenario[e.name] = Object.fromEntries(
       scenarios.map((s) => [s, aggregate(rs.filter((r) => r.sample.scenarios.includes(s)))]),
     );
@@ -73,7 +81,9 @@ export function buildReport(
   const L: string[] = [];
   L.push(`# Benchmark — ${meta.dataset} / ${meta.split}`, "");
   L.push(`Fecha ${meta.date} · commit \`${meta.commit}\` · ${meta.runtime} · CPU ${meta.cpu}`);
-  if (meta.reason) L.push(`Motivo de la ejecución sobre test: ${meta.reason}`);
+  if (meta.reason) L.push(`Motivo de la ejecución sobre ${meta.split}: ${meta.reason}`);
+  if (meta.excludedLicenses?.length)
+    L.push(`Licencias excluidas: ${meta.excludedLicenses.join(", ")}`);
   if (meta.dataset !== "real") {
     L.push(
       "",
@@ -89,10 +99,13 @@ export function buildReport(
     "| Motor | Muestras | Recall (muestra) | Recall (código) | Lecturas falsas | Tasa falsa | FP en negativas | p50 ms | p95 ms | p99 ms |",
     "|---|---|---|---|---|---|---|---|---|---|",
   );
-  for (const e of engines) {
-    const g = global[e.name] as Aggregate;
+  const rows = engines.flatMap((e) => [
+    [e.name, global[e.name] as Aggregate] as const,
+    ...(restricted ? [[`${e.name} (publicable)`, publishable[e.name] as Aggregate] as const] : []),
+  ]);
+  for (const [name, g] of rows) {
     L.push(
-      `| ${e.name} | ${g.samples} | ${pc(g.recallSample)} | ${pc(g.recallCode)} | ${g.falseReads} | ${pc(g.falseReadRate)} | ${pc(g.negativesFp)} | ${ms(g.p50)} | ${ms(g.p95)} | ${ms(g.p99)} |`,
+      `| ${name} | ${g.samples} | ${pc(g.recallSample)} | ${pc(g.recallCode)} | ${g.falseReads} | ${pc(g.falseReadRate)} | ${pc(g.negativesFp)} | ${ms(g.p50)} | ${ms(g.p95)} | ${ms(g.p99)} |`,
     );
   }
   L.push(
@@ -168,6 +181,7 @@ export function buildReport(
       meta,
       engines: engines.map(({ name, version, notes }) => ({ name, version, notes })),
       global,
+      ...(restricted ? { publishable } : {}),
       byScenario,
       comparisons,
     },

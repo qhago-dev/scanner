@@ -73,3 +73,8 @@ apps/demo/debug-captures/
 # Conjunto device (fotos privadas del dispositivo)
 bench/dataset/device/manifest.jsonl
 bench/dataset/device/splits.json
+
+# Generados por scripts/finish-package.mjs (copias de la raíz)
+packages/scanner/LICENSE
+packages/*/NOTICE
+packages/*/LICENSE-APACHE-2.0

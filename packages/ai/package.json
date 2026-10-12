@@ -24,7 +24,9 @@
     "MODEL_CARD.md",
     "LICENSE",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE-APACHE-2.0",
+    "NOTICE"
   ],
   "repository": {
     "type": "git",
@@ -44,7 +46,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "rm -rf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/finish-package.mjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run --project node",
     "test:browser": "vitest run --project browser"

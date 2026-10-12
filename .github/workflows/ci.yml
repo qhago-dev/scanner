@@ -65,6 +65,9 @@ jobs:
       # Cámara simulada en Firefox (shim). WebKit en Linux no reproduce captureStream: Safari va en la matriz manual.
       - run: cd packages/scanner && bunx vitest run --project camera
       - run: bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build
+      # F7.2: el paquete publicable (tarball real) pasa publint y attw (tipos resolubles en ESM/node16 y bundlers)
+      - run: cd packages/scanner && bunx publint && bunx @arethetypeswrong/cli --pack --profile esm-only
+      - run: cd packages/ai && bunx publint && bunx @arethetypeswrong/cli --pack --profile esm-only
       # F6.4: presupuestos de tamaño por entry y escenarios con tree-shaking.
       - run: cd packages/scanner && bun run size
       # F6.3/F6.6: dist servido desde otro origen (CDN con CORS) bajo CSP estricta.

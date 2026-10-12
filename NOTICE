@@ -24,4 +24,5 @@ WebAssembly engine (packages/engine-wasm) and distributed with @qhago/scanner:
 
 @qhago/ai additionally depends on onnxruntime-web (MIT License, Microsoft Corporation).
 
-Full license texts are available at the URLs above and in packages/engine-wasm/vendor/.
+The Apache License 2.0 text is included as LICENSE-APACHE-2.0. The other license texts are available at the
+URLs above and, in the source repository, in packages/engine-wasm/vendor/.

@@ -52,7 +52,8 @@
     "LICENSE",
     "NOTICE",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE-APACHE-2.0"
   ],
   "repository": {
     "type": "git",
@@ -77,7 +78,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "rm -rf dist && node scripts/copy-wasm.mjs && tsup && tsc -p tsconfig.build.json && node scripts/copy-wasm.mjs --dist",
+    "build": "rm -rf dist && node scripts/copy-wasm.mjs && tsup && tsc -p tsconfig.build.json && node scripts/copy-wasm.mjs --dist && node ../../scripts/finish-package.mjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run --project node && bun test test/bun",
     "test:browser": "vitest run --project browser",

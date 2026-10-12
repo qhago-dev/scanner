@@ -14,3 +14,10 @@ sirven para evaluar; nunca para entrenar modelos publicados (ADR-09). Privacidad
 | [BarBeR](https://ditto.ing.unimore.it/barber/) (Vezzali et al. 2024), 8 748 imágenes 1D+2D con polígono y valor | real | por fuente (agregado); descarga con cuenta | — | pendiente: requiere registro del autor |
 | InventBar / ParcelBar (Kamnardsiri et al. 2022) | real | CC-BY-4.0 | — | sin valores (solo cajas); Kaggle con login |
 | Dubská / Szentandrási QR | real | CC-BY-4.0 | — | enlaces caídos (404) |
+
+## Splits de `public` (F10.1, 2026-10-12)
+
+`b = sha1(valor) % 10`: `b < 5` dev (1288 imágenes / 1061 objetos), `5 ≤ b < 8` test (818 / 663), `b ≥ 8` holdout
+(499 / 425). Hasta el 2026-10-12 el split era `b < 3` dev / resto test, y el test antiguo se usó para decidir cambios
+a nivel de muestra (conflictos, verify, deblur). El dev nuevo = dev antiguo + 523 del test antiguo; test y holdout
+nuevos = 100 % del test antiguo → **semi-ciegos**. El estimador limpio será la captura `device` v2.

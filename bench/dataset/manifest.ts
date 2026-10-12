@@ -24,7 +24,7 @@ export interface Sample {
   source: string;
   license: string;
   object: string;
-  split: "dev" | "test";
+  split: "dev" | "test" | "holdout";
   /** Ruta absoluta (resuelta al cargar). */
   path: string;
 }
@@ -66,7 +66,8 @@ export function loadManifest(nameOrPath: string): Sample[] {
     .map((l, i) => {
       const s = JSON.parse(l) as Sample;
       for (const k of REQUIRED) if (!(k in s)) throw new Error(`${p}:${i + 1}: falta "${k}"`);
-      if (s.split !== "dev" && s.split !== "test") throw new Error(`${p}:${i + 1}: split inválido`);
+      if (!["dev", "test", "holdout"].includes(s.split))
+        throw new Error(`${p}:${i + 1}: split inválido`);
       return { ...s, path: join(base, s.file) };
     });
 }

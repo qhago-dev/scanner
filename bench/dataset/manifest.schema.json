@@ -73,7 +73,7 @@
     "source": { "type": "string" },
     "license": { "type": "string", "description": "own | CC0-1.0 | CC-BY-4.0 | research-only | …" },
     "object": { "type": "string", "description": "Objeto físico: agrupa splits y bootstrap" },
-    "split": { "enum": ["dev", "test"] },
+    "split": { "enum": ["dev", "test", "holdout"] },
     "privacyReviewed": { "type": "boolean" }
   }
 }

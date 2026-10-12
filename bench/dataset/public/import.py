@@ -5,7 +5,9 @@
 - KAIST / Zenodo 13586402 (CC BY 4.0): real/ (EAN-13, valor en txt/) y e8_bb (EAN-8, valor en el nombre).
   real/ incluye copias de ArTe-Lab (se descartan: se usan los originales) y de Muenster BarcodeDB
   (nombre "<EAN>-NN-N"; licencia original CC BY-NC-ND 4.0 → marcadas research-only, solo evaluación, ADR-09).
-Split por objeto (= valor del código, el mismo producto nunca cae en dev y test): sha1(valor) % 10 < 3 → dev.
+Split por objeto (= valor del código, el mismo producto nunca cae en dos splits), F10.1: b = sha1(valor) % 10;
+b < 5 → dev, 5 ≤ b < 8 → test, b ≥ 8 → holdout. test y holdout salen del test anterior a F10 (ya observado a nivel de
+muestra): son semi-ciegos, sirven de control de regresión (ver SOURCES.md).
 """
 
 from __future__ import annotations
@@ -32,13 +34,18 @@ def gtin_ok(v: str) -> bool:
     return (10 - s % 10) % 10 == d[-1]
 
 
+def split_of(value: str) -> str:
+    b = int(hashlib.sha1(value.encode()).hexdigest(), 16) % 10
+    return "dev" if b < 5 else "test" if b < 8 else "holdout"
+
+
 def entry(img: Path, value: str, fmt: str, scenario: str, source: str, license_: str, device: str) -> dict | None:
     if not (value.isdigit() and gtin_ok(value)):
         return None  # etiqueta dudosa: mejor fuera que ruido en el ground truth
     im = cv2.imread(str(img), cv2.IMREAD_UNCHANGED)
     if im is None:
         return None
-    split = "dev" if int(hashlib.sha1(value.encode()).hexdigest(), 16) % 10 < 3 else "test"
+    split = split_of(value)
     return {
         "id": f"{source}/{img.stem}",
         "file": str(img.relative_to(HERE)),

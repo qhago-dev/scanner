@@ -1,7 +1,6 @@
-// bun run bench -- --dataset synthetic|zxing|real|<ruta> --split dev|test --engines qhago,zxing-wasm,zxing-js,quagga2
-//                  [--limit N] [--reason "…"] [--out bench/results]
-import { execSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+// bun run bench -- --dataset synthetic|zxing|real|<ruta> --split dev|test|holdout --engines qhago,zxing-wasm,zxing-js,quagga2
+//                  [--limit N] [--reason "…"] [--holdout-ok] [--out bench/results]
+import { mkdirSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -12,6 +11,7 @@ import { quagga2Engine } from "./engines/quagga2";
 import type { Engine } from "./engines/types";
 import { zxingJsEngine } from "./engines/zxing-js";
 import { zxingWasmEngine } from "./engines/zxing-wasm";
+import { commitId, guardSplit } from "./guard";
 import { loadRgba } from "./image";
 import type { SampleRun } from "./metrics";
 import { buildReport } from "./report";
@@ -24,6 +24,7 @@ const { values: a } = parseArgs({
     kind: { type: "string", default: "image" },
     limit: { type: "string" },
     reason: { type: "string" },
+    "holdout-ok": { type: "boolean", default: false },
     out: { type: "string", default: join(import.meta.dir, "results") },
   },
 });
@@ -45,12 +46,16 @@ if (a.kind !== "image") {
   );
   process.exit(2);
 }
-if (a.split === "test" && !a.reason) {
-  console.error(
-    "--split test exige --reason (F1: test solo para gates y RCs, y cada ejecución se registra).",
-  );
-  process.exit(2);
-}
+
+guardSplit({
+  split: a.split ?? "dev",
+  reason: a.reason,
+  holdoutOk: a["holdout-ok"],
+  runner: "cli",
+  dataset: a.dataset ?? "",
+  engines: a.engines ?? "",
+  out: a.out ?? "results",
+});
 
 const all = loadManifest(a.dataset).filter((s) => s.split === a.split && s.kind === "image");
 const samples = a.limit ? all.slice(0, Number(a.limit)) : all;
@@ -89,13 +94,7 @@ for (const [i, s] of samples.entries()) {
 }
 for (const e of engines) await e.dispose();
 
-const commit = (() => {
-  try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
-  } catch {
-    return "unknown";
-  }
-})();
+const commit = commitId();
 const date = new Date().toISOString().slice(0, 10);
 const meta = {
   dataset: a.dataset ?? "",
@@ -112,14 +111,5 @@ mkdirSync(out, { recursive: true });
 const name = `${date}-${commit}-${a.dataset}-${a.split}`;
 writeFileSync(join(out, `${name}.md`), markdown);
 writeFileSync(join(out, `${name}.json`), JSON.stringify(json, null, 2));
-if (a.split === "test") {
-  const log = join(out, "test-runs.md");
-  if (!existsSync(log))
-    writeFileSync(
-      log,
-      "# Ejecuciones sobre el split test\n\n| Fecha | Commit | Dataset | Motores | Motivo |\n|---|---|---|---|---|\n",
-    );
-  appendFileSync(log, `| ${date} | ${commit} | ${a.dataset} | ${a.engines} | ${a.reason} |\n`);
-}
 console.log(markdown);
 console.error(`→ ${join(out, `${name}.md`)}`);

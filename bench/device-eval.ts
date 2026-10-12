@@ -1,12 +1,14 @@
 // Evaluación rápida sobre `device` (fotos reales con veredicto manual): lecturas por clase, falsas con detalle.
-// bun run device-eval.ts [--split dev|test] [--engines qhago-fast,qhago,qhago+ai] [--json out.json]
+// bun run device-eval.ts [--split dev|test] [--engines qhago-fast,qhago,qhago+ai] [--json out.json] [--reason …]
 import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { loadManifest } from "./dataset/manifest";
 import { qhagoEngine } from "./engines/qhago";
 import { qhagoAiEngine } from "./engines/qhago-ai";
 import type { Engine } from "./engines/types";
 import { zxingWasmEngine } from "./engines/zxing-wasm";
+import { guardSplit } from "./guard";
 import { loadRgba } from "./image";
 
 const { values: a } = parseArgs({
@@ -14,7 +16,18 @@ const { values: a } = parseArgs({
     split: { type: "string", default: "dev" },
     engines: { type: "string", default: "qhago-fast,qhago,qhago+ai" },
     json: { type: "string" },
+    reason: { type: "string" },
+    "holdout-ok": { type: "boolean", default: false },
   },
+});
+guardSplit({
+  split: a.split ?? "dev",
+  reason: a.reason,
+  holdoutOk: a["holdout-ok"],
+  runner: "device-eval",
+  dataset: "device",
+  engines: a.engines ?? "",
+  out: join(import.meta.dir, "results"),
 });
 const ENGINES: Record<string, () => Engine> = {
   "qhago-fast": () => qhagoEngine("fast"),

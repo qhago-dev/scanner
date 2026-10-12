@@ -1,7 +1,7 @@
 // Benchmark de vídeo (F1/F3, gate G3) en tiempo real simulado:
 // los frames llegan a su FPS; si el motor está ocupado, el frame se descarta (como en una cámara).
 // qhago usa su sesión real (tracker + fusión multi-frame); el resto decodifica frame a frame.
-// Uso: bun run runners/video.ts --dataset synthetic-video --split dev [--engines qhago,zxing-wasm,zxing-js] [--reason …]
+// Uso: bun run runners/video.ts --dataset synthetic-video --split dev [--engines qhago,zxing-wasm,zxing-js] [--reason …] [--holdout-ok]
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,6 +14,7 @@ import { loadManifest, type Sample } from "../dataset/manifest";
 import type { Engine } from "../engines/types";
 import { zxingJsEngine } from "../engines/zxing-js";
 import { zxingWasmEngine } from "../engines/zxing-wasm";
+import { guardSplit } from "../guard";
 import { equivalent, pairedBootstrap, recallMetric, type SampleRun, verdict } from "../metrics";
 
 const { values: a } = parseArgs({
@@ -22,15 +23,21 @@ const { values: a } = parseArgs({
     split: { type: "string", default: "dev" },
     engines: { type: "string", default: "qhago,zxing-wasm,zxing-js" },
     reason: { type: "string" },
+    "holdout-ok": { type: "boolean", default: false },
     // Multiplica el tiempo de proceso medido (simula un equipo más lento; un Android de gama media ≈ 8-10).
     slowdown: { type: "string", default: "1" },
     out: { type: "string", default: join(import.meta.dir, "../results") },
   },
 });
-if (a.split === "test" && !a.reason) {
-  console.error("--split test exige --reason");
-  process.exit(2);
-}
+guardSplit({
+  split: a.split ?? "dev",
+  reason: a.reason,
+  holdoutOk: a["holdout-ok"],
+  runner: `video x${a.slowdown}`,
+  dataset: a.dataset ?? "",
+  engines: a.engines ?? "",
+  out: a.out ?? "results",
+});
 const SLOW = Number(a.slowdown);
 configure({
   wasmUrl: new URL("../../packages/scanner/wasm/qhago_engine_node.wasm", import.meta.url),

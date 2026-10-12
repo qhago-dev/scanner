@@ -1,7 +1,8 @@
 // Cámara simulada sobre `device`: cada foto real se repite como un vídeo quieto (15 fps, `--seconds`), con la
 // sesión real (tracker + fusión + barrido + deblur), descartando frames si el motor está ocupado y con el
 // tiempo de proceso multiplicado por `--slowdown` (≈ 10 para el Android de las pruebas).
-// bun run runners/device-cam.ts --split dev [--slowdown 10] [--seconds 1.5]
+// bun run runners/device-cam.ts --split dev [--slowdown 10] [--seconds 1.5] [--only <sesión>] [--reason …]
+import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { FORMATS } from "@qhago/scanner";
 import { configure } from "../../packages/scanner/src/config";
@@ -9,6 +10,7 @@ import { loadEngine } from "../../packages/scanner/src/engine/load-node";
 import { toRaster } from "../../packages/scanner/src/input/node";
 import { ScannerSession } from "../../packages/scanner/src/scanner/session";
 import { loadManifest } from "../dataset/manifest";
+import { guardSplit } from "../guard";
 import { loadRgba } from "../image";
 
 const { values: a } = parseArgs({
@@ -16,7 +18,19 @@ const { values: a } = parseArgs({
     split: { type: "string", default: "dev" },
     slowdown: { type: "string", default: "10" },
     seconds: { type: "string", default: "1.5" },
+    only: { type: "string", default: "" },
+    reason: { type: "string" },
+    "holdout-ok": { type: "boolean", default: false },
   },
+});
+guardSplit({
+  split: a.split ?? "dev",
+  reason: a.reason,
+  holdoutOk: a["holdout-ok"],
+  runner: `device-cam x${a.slowdown}`,
+  dataset: "device",
+  engines: "qhago (sesión)",
+  out: join(import.meta.dir, "../results"),
 });
 configure({
   wasmUrl: new URL("../../packages/scanner/wasm/qhago_engine_node.wasm", import.meta.url),
@@ -26,7 +40,10 @@ const DUR = Number(a.seconds) * 1000;
 const norm = (t: string) => t.replace(/^0+/, "");
 const tally: Record<string, { ok: number; n: number; t: number[] }> = {};
 const falses: string[] = [];
-for (const s of loadManifest("device").filter((x) => x.split === a.split)) {
+const missed: string[] = [];
+for (const s of loadManifest("device").filter(
+  (x) => x.split === a.split && x.path.includes(a.only ?? ""),
+)) {
   const img = loadRgba(s.path);
   const reads: { text: string; at: number }[] = [];
   const session = new ScannerSession(
@@ -65,7 +82,7 @@ for (const s of loadManifest("device").filter((x) => x.split === a.split)) {
   if (hit) {
     c.ok++;
     c.t.push(hit.at);
-  }
+  } else if (cls === "legible") missed.push(s.id);
   for (const x of reads) if (!want || norm(x.text) !== norm(want)) falses.push(`${s.id}=${x.text}`);
 }
 const med = (v: number[]) => (v.length ? v.sort((x, y) => x - y)[v.length >> 1]?.toFixed(0) : "—");
@@ -76,3 +93,4 @@ console.log(
   `· falsas ${falses.length}`,
   falses.join(", "),
 );
+if (a.only) console.log("legibles sin leer:", missed.join(" "));

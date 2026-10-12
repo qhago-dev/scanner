@@ -37,3 +37,8 @@ Con la regla de conflictos 1D (`src/conflicts.ts`): qhago 76,9 → 76,5 % y lect
 igual y 19 → 9. Informe: `2026-10-10-793ff50-conflicts-public-test.md`.
 Con la verificación de EAN/UPC hallados solo con "harder" (2 vistas): recall 76,6 %, falsas 7, p95 165 → 327 ms
 (corrige 3 lecturas falsas reales de Android y `upca-2/48` de zxing-cpp). Informe: `2026-10-10-23fdf80-verify-public-test.md`.
+
+## Nota F10.1 (2026-10-12): cambio de splits de `public`
+
+Las cifras de `public` de arriba usan el split anterior (dev 765 / test 1840). Desde F10.1 hay dev / test / holdout
+(1288 / 818 / 499) y no son comparables fila a fila. La línea base nueva se mide en F10.L sobre el dev nuevo.

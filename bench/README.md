@@ -12,7 +12,13 @@ bun run bench/dataset/fetch.ts                     # dataset real (bucket privad
 cd bench
 bun run cli.ts --dataset synthetic --split dev
 bun run cli.ts --dataset real --split test --reason "Gate G2"   # test exige motivo y queda registrado
+bun run cli.ts --dataset public --split holdout --reason "RC" --holdout-ok   # holdout: solo release
 ```
+
+Splits (F10.1): `dev` para ajustar y aprobar mejoras; `test` para gates y cierres de fase; `holdout` solo para la
+release. `bench/guard.ts` aplica la regla en `cli.ts`, `runners/video.ts`, `runners/device-cam.ts` y `device-eval.ts`
+y registra cada ejecución en `results/test-runs.md` / `results/holdout-runs.md`. En `public`, test y holdout son
+**semi-ciegos** (salen del test anterior a F10, ya observado): control de regresión, no estimación limpia.
 
 | Dataset | Qué es | ¿Sirve para gates? |
 |---|---|---|

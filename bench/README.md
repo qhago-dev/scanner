@@ -33,3 +33,19 @@ y registra cada ejecución en `results/test-runs.md` / `results/holdout-runs.md`
 - Salida: `results/<fecha>-<commit>-<dataset>-<split>.{md,json}`; ejecuciones sobre `test` en `results/test-runs.md`.
 - En dispositivo real: `apps/demo/bench.html` (incluye `BarcodeDetector` nativo cuando existe).
 - Hardware de referencia: `HARDWARE.md`. Fuentes y licencias: `dataset/SOURCES.md`.
+
+## Herramientas de la fase 10
+
+| Herramienta | Uso |
+|---|---|
+| `public/derive.py` | `public-neg` (negativas recortadas, control de regresión) y `public-blur` (desenfoque en módulos) |
+| `coverage.ts --dataset device [--strict]` | Cobertura frente a `dataset/targets.json` (solo conteos) |
+| `diff.ts base.json nuevo.json [--strict]` | Falsas nuevas foto a foto y ganadas/perdidas por objeto (test de signos) |
+| `budget.ts reporte.json… [--hw dev-local]` | Presupuestos de latencia (`budgets.json`); `--set r1 r2 r3` fija mediana × 1,10 |
+| `runners/video.ts --slowdown 5` | Además de ttfr: coste por frame, % frames > 150 ms y falsas por 1000 frames con cota 95 % |
+
+Los reportes muestran, por comparación, objetos (⚠ si < 30), "MDE de esta comparación" (2,8·se, informativo) y
+el conteo por objeto. La regla de gate del roadmap (n ≥ 60 por escenario) no cambia.
+
+El bench nocturno de CI solo corre `zxing` y `synthetic` (sin `public`, `device` ni vídeo: no hay descarga ni
+ffmpeg en ese job), así que los presupuestos se comprueban en local (`dev-local`) hasta que se añadan.

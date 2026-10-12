@@ -15,7 +15,14 @@ import type { Engine } from "../engines/types";
 import { zxingJsEngine } from "../engines/zxing-js";
 import { zxingWasmEngine } from "../engines/zxing-wasm";
 import { guardSplit } from "../guard";
-import { equivalent, pairedBootstrap, recallMetric, type SampleRun, verdict } from "../metrics";
+import {
+  equivalent,
+  pairedBootstrap,
+  recallMetric,
+  type SampleRun,
+  upper95,
+  verdict,
+} from "../metrics";
 
 const { values: a } = parseArgs({
   options: {
@@ -48,7 +55,12 @@ interface VideoRun {
   reads: { text: string; format: string; atMs: number }[];
   processed: number;
   dropped: number;
+  /** Coste de cada frame procesado, ya multiplicado por --slowdown (F10.6). */
+  frameMs: number[];
 }
+
+/** Presupuesto por frame en el teléfono (criterio 4 de fase 9). */
+const FRAME_BUDGET_MS = 150;
 
 function frames(s: Sample): { w: number; h: number; fps: number; data: Buffer[] } {
   const [w, h] = s.resolution ?? [0, 0];
@@ -89,6 +101,7 @@ async function runQhago(s: Sample): Promise<VideoRun> {
   let busyUntil = 0;
   let processed = 0;
   let dropped = 0;
+  const frameMs: number[] = [];
   for (const [i, f] of v.data.entries()) {
     const t = (i * 1000) / v.fps;
     if (t < busyUntil) {
@@ -101,10 +114,11 @@ async function runQhago(s: Sample): Promise<VideoRun> {
     );
     processed++;
     busyUntil = t + r.ms * SLOW;
+    frameMs.push(r.ms * SLOW);
     // Los detect emitidos durante process() se fechan cuando termina ese frame.
     for (const p of pending.splice(0)) reads.push({ ...p, atMs: busyUntil });
   }
-  return { sample: s, reads, processed, dropped };
+  return { sample: s, reads, processed, dropped, frameMs };
 }
 
 async function runFrameByFrame(e: Engine, s: Sample): Promise<VideoRun> {
@@ -113,6 +127,7 @@ async function runFrameByFrame(e: Engine, s: Sample): Promise<VideoRun> {
   let busyUntil = 0;
   let processed = 0;
   let dropped = 0;
+  const frameMs: number[] = [];
   const rgba = new Uint8ClampedArray(v.w * v.h * 4);
   for (const [i, f] of v.data.entries()) {
     const t = (i * 1000) / v.fps;
@@ -130,10 +145,11 @@ async function runFrameByFrame(e: Engine, s: Sample): Promise<VideoRun> {
     const ms = (performance.now() - t0) * SLOW;
     processed++;
     busyUntil = t + ms;
+    frameMs.push(ms);
     for (const d of det)
       if (!reads.some((r) => r.text === d.text)) reads.push({ ...d, atMs: busyUntil });
   }
-  return { sample: s, reads, processed, dropped };
+  return { sample: s, reads, processed, dropped, frameMs };
 }
 
 const samples = loadManifest(a.dataset ?? "").filter(
@@ -180,6 +196,7 @@ L.push(
   "| Motor | Vídeos | % leídos | ttfr p50 ms | ttfr p95 ms | Lecturas falsas | FP en negativas | Frames procesados | Descartados |",
   "|---|---|---|---|---|---|---|---|---|",
 );
+const engineAgg: Record<string, Record<string, number>> = {};
 for (const [name, runs] of results) {
   const pos = runs.filter((r) => r.sample.codes.length);
   const neg = runs.filter((r) => !r.sample.codes.length);
@@ -198,10 +215,42 @@ for (const [name, runs] of results) {
   const fpNeg = neg.filter((r) => r.reads.length).length;
   const proc = runs.reduce((s, r) => s + r.processed, 0);
   const drop = runs.reduce((s, r) => s + r.dropped, 0);
+  const fms = runs.flatMap((r) => r.frameMs);
+  engineAgg[name] = {
+    videos: runs.length,
+    positives: pos.length,
+    readPct: (read / Math.max(1, pos.length)) * 100,
+    ttfrP50: pct(ttfr, 50),
+    ttfrP95: pct(ttfr, 95),
+    falseReads,
+    negativesWithReads: fpNeg,
+    negatives: neg.length,
+    processed: proc,
+    dropped: drop,
+    frameP50: pct(fms, 50),
+    frameP95: pct(fms, 95),
+    frameMax: fms.length ? Math.max(...fms) : Number.NaN,
+    framesOver150Pct: fms.length
+      ? (fms.filter((x) => x > FRAME_BUDGET_MS).length / fms.length) * 100
+      : Number.NaN,
+    falsePer1000: proc ? (falseReads / proc) * 1000 : Number.NaN,
+    falsePer1000Upper: proc ? upper95(falseReads, proc) * 1000 : Number.NaN,
+  };
   L.push(
     `| ${name} | ${runs.length} | ${((read / Math.max(1, pos.length)) * 100).toFixed(1)} % | ${pct(ttfr, 50).toFixed(0)} | ${pct(ttfr, 95).toFixed(0)} | ${falseReads} | ${fpNeg}/${neg.length} | ${proc} | ${drop} |`,
   );
 }
+L.push(
+  "",
+  `Coste por frame (ms × ${SLOW}; presupuesto del teléfono ${FRAME_BUDGET_MS} ms) y falsas por 1000 frames procesados (cota 95 %):`,
+  "",
+  "| Motor | Frame p50 | Frame p95 | Frame máx | % frames > 150 ms | Falsas / 1000 frames (cota 95 %) |",
+  "|---|---|---|---|---|---|",
+);
+for (const [name, g] of Object.entries(engineAgg))
+  L.push(
+    `| ${name} | ${g.frameP50?.toFixed(0)} | ${g.frameP95?.toFixed(0)} | ${g.frameMax?.toFixed(0)} | ${g.framesOver150Pct?.toFixed(1)} % | ${g.falsePer1000?.toFixed(2)} (≤ ${g.falsePer1000Upper?.toFixed(2)}) |`,
+  );
 const base = results.get("qhago");
 if (base) {
   L.push("", "| vs | Δ % leídos (qhago − otro) | IC 95 % | Veredicto |", "|---|---|---|---|");
@@ -218,7 +267,7 @@ mkdirSync(a.out ?? "results", { recursive: true });
 const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
 const file = join(
   a.out ?? "results",
-  `${new Date().toISOString().slice(0, 10)}-${commit}-${a.dataset}-${a.split}.md`,
+  `${new Date().toISOString().slice(0, 10)}-${commit}-${a.dataset}-${a.split}${SLOW !== 1 ? `-x${SLOW}` : ""}.md`,
 );
 writeFileSync(file, md);
 // Detalle por vídeo (para comparar cambios vídeo a vídeo).
@@ -238,5 +287,23 @@ const detail = Object.fromEntries(
     }),
   ]),
 );
-writeFileSync(file.replace(/\.md$/, ".json"), `${JSON.stringify(detail, null, 1)}\n`);
+writeFileSync(
+  file.replace(/\.md$/, ".json"),
+  `${JSON.stringify(
+    {
+      meta: {
+        kind: "video",
+        dataset: a.dataset,
+        split: a.split,
+        slowdown: SLOW,
+        commit,
+        date: new Date().toISOString().slice(0, 10),
+      },
+      engines: engineAgg,
+      detail,
+    },
+    null,
+    1,
+  )}\n`,
+);
 console.log(md);

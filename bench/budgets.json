@@ -1,0 +1,5 @@
+{
+  "_doc": "Presupuestos de latencia por hardware (F10.6). Valores = mediana de 3 ejecuciones de la línea base × 1,10, por motor; se fijan con `bun run budget.ts --set` en F10.L. Hasta entonces: vacío (informativo).",
+  "_cpu": { "dev-local": "i9-12900H" },
+  "dev-local": {}
+}

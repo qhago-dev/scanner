@@ -1,5 +1,20 @@
 # Registro de revisión de los SDD
 
+## Fase 10 v3 — 2026-10-12 (tres pasadas de revisión independiente)
+
+Resultado final: **APROBADO** (0 bloqueantes, 0 importantes; 2 menores y 2 dudas aplicados).
+
+- v1 → NO APROBADO (3 bloqueantes, 11 importantes): la suficiencia "≥ 30 objetos" dejaba sin veredicto defocus (27
+  objetos reales) y EAN-8; EAN-8 desenfocado no medible; M7 no medible (cámara simulada con foto fija) y con riesgo
+  de confirmar falsos; holdout presentado como ciego; candidato "localización compartida" sin ahorro real; plazo en
+  ms hacía `decode()` dependiente del hardware; `device` con los mismos 4 productos en dev y test.
+- v2: regla de gate del README sin cambios (objetos/MDE informativos); dataset `public-blur` derivado; M7 diferido;
+  B10 condicionado; negativas como control de regresión; `splits.json` explícito; guarda en todos los runners;
+  límite por trabajo y `timeBudgetMs` solo si lo fija el usuario → NO APROBADO (4 importantes).
+- v3: conteo por objeto + test de signos (≥ 8 discordantes, regla multi-conjunto); B10 solo en `decode()`; variantes
+  disco/movimiento; plan B de EAN-8 (< 20 objetos → se aplaza); zxing-cpp 3.1.1 sin `try_harder` (muestra del 10 %:
+  localiza 71 %, módulo 5,7 px) → APROBADO.
+
 ## v1.2 — 2026-10-10 (segunda verificación independiente)
 
 Resultado: **0 bloqueantes**, 7 importantes, 8 menores, 5 dudas técnicas. Todo aplicado.

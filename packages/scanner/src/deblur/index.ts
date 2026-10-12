@@ -20,6 +20,11 @@ export interface DeblurOptions {
   minVotes?: number;
   /** "full" (fotos) o "fast" (cámara: búsqueda de geometría reducida). */
   mode?: "full" | "fast";
+  /**
+   * Unanimidad (fase 10, regiones propuestas por la IA): se prueban todas las líneas (sin corte temprano) y se
+   * descarta la región si alguna línea con buen ajuste da otro número.
+   */
+  unanimous?: boolean;
 }
 
 const enc = new TextEncoder();
@@ -56,7 +61,7 @@ export function readBlurredEan(r: Raster, o: DeblurOptions = {}): BarcodeResult[
         v.frac.push(frac);
         votes.set(best.text, v);
         // corte temprano: dos líneas de acuerdo bastan
-        if (v.n >= minVotes && other === 0) break;
+        if (!o.unanimous && v.n >= minVotes && other === 0) break;
       } else if (best.fit >= minFit) other++;
     }
     const ranked = [...votes.entries()].sort((x, y) => y[1].n - x[1].n);
@@ -64,6 +69,7 @@ export function readBlurredEan(r: Raster, o: DeblurOptions = {}): BarcodeResult[
     if (!top) continue;
     const rest = ranked.slice(1).reduce((s, [, v]) => s + v.n, 0);
     if (top[1].n < minVotes || top[1].n < 2 * rest) continue;
+    if (o.unanimous && (rest > 0 || other > 0)) continue;
     out.push(toResult(top[0], g, top[1], prof0Len(g)));
   }
   return out;

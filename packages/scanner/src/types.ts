@@ -63,6 +63,13 @@ export interface AdvancedDecodeOptions {
    * (GS1 con separador \x1d). "hri" = forma legible (GS1 con paréntesis). "escaped" = controles como <GS>.
    */
   textMode: "plain" | "hri" | "escaped" | "eci";
+  /**
+   * Experimental (default false): las cajas propuestas por plugins (p. ej. el detector de @qhago/ai) también
+   * alimentan al lector EAN para códigos desenfocados en `decode()`. En fotos con desenfoque añade lecturas, pero
+   * aún tiene 1 lectura falsa nueva por cada ~4600 imágenes en el conjunto de evaluación; se activará por defecto
+   * cuando se valide con fotos reales del dispositivo.
+   */
+  deblurProposals: boolean;
 }
 
 export interface DecodeOptions {

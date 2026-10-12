@@ -35,6 +35,7 @@ const ENGINES: Record<string, () => Engine> = {
   qhago: () => qhagoEngine("balanced"),
   "qhago-thorough": () => qhagoEngine("thorough"),
   "qhago+ai": () => qhagoAiEngine(),
+  "qhago+ai+deblur": () => qhagoAiEngine(undefined, "fallback", true),
   "zxing-wasm": zxingWasmEngine,
 };
 const samples = loadManifest("device").filter((s) => s.split === a.split);

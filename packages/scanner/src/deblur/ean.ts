@@ -355,6 +355,13 @@ function search(
   return best;
 }
 
+/**
+ * Muestras del perfil por módulo por debajo de las cuales no se intenta leer (el perfil tiene 2 muestras/px):
+ * 3 = 1,5 px/módulo. Con ~1 px/módulo el desenfoque hace el símbolo irresoluble y el ajuste encuentra números
+ * con checksum válido y fit alto (fase 10: miniatura de 140×38 px leída como otro EAN a través de una caja IA).
+ */
+export const MIN_SAMPLES_PER_MODULE = 3;
+
 const COARSE: [number, number, number, number][] = [];
 const COARSE_FULL: [number, number, number, number][] = [];
 for (const dl of [-1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2])
@@ -388,7 +395,7 @@ export function fitSpans(
   let best: { g: Geo; a: number; w0: number } | null = null;
   for (const [a, b] of spans) {
     const w0 = (b - a) / 95;
-    if (w0 < 1.6) continue;
+    if (w0 < MIN_SAMPLES_PER_MODULE) continue;
     let g = search(q, a, w0, full ? COARSE_FULL : COARSE, null);
     if (!g) continue;
     if (full) g = refine(a, w0, g);

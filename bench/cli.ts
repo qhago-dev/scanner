@@ -35,6 +35,7 @@ const FACTORIES: Record<string, () => Engine> = {
   "qhago-fast": () => qhagoEngine("fast"),
   "qhago-thorough": () => qhagoEngine("thorough"),
   "qhago+ai": () => qhagoAiEngine(),
+  "qhago+ai+deblur": () => qhagoAiEngine(undefined, "fallback", true),
   "qhago+ai-always": () => qhagoAiEngine(undefined, "always"),
   "zxing-wasm": zxingWasmEngine,
   "zxing-js": zxingJsEngine,

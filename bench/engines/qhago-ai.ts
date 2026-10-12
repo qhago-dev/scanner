@@ -24,9 +24,11 @@ export function qhagoAiEngine(
       fileURLToPath(new URL("../../packages/ai/models/detector.int8.onnx", import.meta.url)),
   ),
   when: "fallback" | "always" = "fallback",
+  /** advanced.deblurProposals (fase 10, B8: experimental). */
+  deblurProposals = false,
 ): Engine {
   let registry: PluginRegistry;
-  const name = when === "always" ? "qhago+ai-always" : "qhago+ai";
+  const name = `${when === "always" ? "qhago+ai-always" : "qhago+ai"}${deblurProposals ? "+deblur" : ""}`;
   return {
     name,
     version: JSON.parse(
@@ -75,6 +77,7 @@ export function qhagoAiEngine(
           formats: FORMATS,
           strategy: "balanced",
           plugins: [{ name: "ai-detector", apiVersion: 1 }],
+          ...(deblurProposals ? { advanced: { deblurProposals: true } } : {}),
         },
         registry,
       )) as BarcodeResult[];

@@ -21,6 +21,7 @@ export interface AdvancedDecodeOptions {
         crops?: boolean;
     };
     textMode: "plain" | "hri" | "escaped" | "eci";
+    deblurProposals: boolean;
 }
 export type BarcodeFormat = (typeof FORMATS)[number];
 export interface BarcodeResult {
@@ -287,6 +288,7 @@ export interface AdvancedDecodeOptions {
         crops?: boolean;
     };
     textMode: "plain" | "hri" | "escaped" | "eci";
+    deblurProposals: boolean;
 }
 export type BarcodeFormat = (typeof FORMATS)[number];
 export interface BarcodeResult {

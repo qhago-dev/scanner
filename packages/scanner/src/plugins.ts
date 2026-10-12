@@ -177,18 +177,23 @@ export function readProposals(
   return dropConflicts(verified);
 }
 
-/** decode() con plugins: si la cascada no lee, cada plugin propone regiones. */
+/**
+ * decode() con plugins: si la cascada no lee, cada plugin propone regiones. Devuelve también las propuestas
+ * (fase 10, B8: alimentan al lector EAN por deconvolución). Un plugin "fallback" no se ejecuta si la cascada ya
+ * leyó algo (aunque sea de otro formato), así que en ese caso no hay propuestas.
+ */
 export async function decodeWithPlugins(
   engine: Engine,
   raster: Raster,
   plugins: Promise<ScannerPlugin>[],
   o: DecodeOptions & { includeErrors?: boolean },
-): Promise<ReturnType<typeof readRaster>> {
-  const base = readRaster(engine, raster, o);
+): Promise<ReturnType<typeof readRaster> & { proposals: PluginProposal[] }> {
+  const base = { ...readRaster(engine, raster, o), proposals: [] as PluginProposal[] };
   for (const pp of plugins) {
     const plugin = await pp;
     if (base.results.length && plugin.when !== "always") continue;
     const props = await plugin.onFrame(raster, { framesWithoutRead: 0, source: "image" });
+    base.proposals.push(...props);
     // Lo que ya leyó la cascada manda: se descartan duplicados y lecturas que la contradicen.
     const extra = readProposals(engine, raster, props, o).filter(
       (x) =>

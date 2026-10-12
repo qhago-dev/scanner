@@ -1,13 +1,18 @@
 import { contradicts, dropConflicts, verifyHarder } from "./conflicts";
 import { readBlurredEan } from "./deblur";
-import { locate1D, type Region1D } from "./deblur/locate";
+import { locate1D, mergeRegions, quadToRegions, type Region1D } from "./deblur/locate";
 import type { Engine, Raster } from "./engine/engine";
 import { encodeOptions } from "./engine/options";
 import { ScanError, throwIfAborted } from "./errors";
 import { DEFAULT_FORMATS, isBarcodeFormat } from "./formats";
 import { normalizeUpc } from "./gtin";
 import { checkPixels, type ImageInput } from "./input/common";
-import { decodeWithPlugins, missingPluginError, type PluginRegistry } from "./plugins";
+import {
+  decodeWithPlugins,
+  missingPluginError,
+  type PluginProposal,
+  type PluginRegistry,
+} from "./plugins";
 import type { BarcodeFormat, BarcodeResult, DecodeOptions, DecodeWithErrors } from "./types";
 import { passesValidation } from "./validate";
 
@@ -123,11 +128,13 @@ export async function decodeInline(
   const engine = await p.loadEngine();
   const raster = await p.toRaster(input, engine);
   throwIfAborted(options.signal);
-  const { results, candidates } = wanted.length
+  const { results, candidates, proposals } = wanted.length
     ? await decodeWithPlugins(engine, raster, (registry as PluginRegistry).resolve(wanted), options)
-    : readRaster(engine, raster, options);
+    : { ...readRaster(engine, raster, options), proposals: [] };
   const checked = deblurCrossCheck(raster, results, options);
-  checked.push(...deblurFallback(raster, checked, options));
+  checked.push(
+    ...deblurFallback(raster, checked, options, deblurExtras(raster, proposals, options)),
+  );
   return options.includeErrors ? { results: checked, candidates } : checked;
 }
 
@@ -192,22 +199,58 @@ function regionOf(r: BarcodeResult): Region1D {
   return { cx, cy, ux, uy, u0: -len / 2, u1: len / 2, v0: -hv, v1: hv, score: 1 };
 }
 
+/**
+ * Máximo de regiones del lector deblur que vienen de propuestas de plugins (IA) y total por imagen. El tensor
+ * conserva siempre sus 2 regiones (el camino sin IA no cambia); la IA añade 1 (medido en fase 10: con 2 IA y 1
+ * tensor se perdían lecturas que daba la segunda región del tensor).
+ */
+export const DEBLUR_AI_REGIONS = 1;
+export const DEBLUR_MAX_REGIONS = 3;
+
+/** Regiones 1D candidatas de las propuestas de plugins (mayor score primero; el tope final lo pone el fallback). */
+export function proposalRegions(raster: Raster, proposals: readonly PluginProposal[]): Region1D[] {
+  return [...proposals]
+    .sort((a, b) => b.score - a.score)
+    .flatMap((p) => quadToRegions(raster, p.quad, p.score))
+    .slice(0, DEBLUR_MAX_REGIONS);
+}
+
+/** Regiones de plugins para el lector deblur: solo con `advanced.deblurProposals` (experimental, fase 10). */
+export function deblurExtras(
+  raster: Raster,
+  proposals: readonly PluginProposal[],
+  options: DecodeOptions,
+): Region1D[] {
+  return options.advanced?.deblurProposals ? proposalRegions(raster, proposals) : [];
+}
+
 export function deblurFallback(
   raster: Raster,
   results: readonly BarcodeResult[],
   options: DecodeOptions,
+  /** Regiones propuestas por plugins (fase 10, B8): se suman a las 2 del tensor, con criterio unánime. */
+  extra: readonly Region1D[] = [],
 ): BarcodeResult[] {
   const requested = options.formats ?? DEFAULT_FORMATS;
   if ((options.strategy ?? "balanced") === "fast") return [];
   if (!requested.includes("ean_13") && !requested.includes("upc_a")) return [];
   if (results.some((r) => EAN_UPC_F.includes(r.format))) return [];
   const reg = options.region;
-  const regions = locate1D(raster, 2).filter(
-    (g) =>
-      !reg ||
-      (g.cx >= reg.x && g.cy >= reg.y && g.cx <= reg.x + reg.width && g.cy <= reg.y + reg.height),
-  );
-  return readBlurredEan(raster, { regions })
+  const inRegion = (g: Region1D) =>
+    !reg ||
+    (g.cx >= reg.x && g.cy >= reg.y && g.cx <= reg.x + reg.width && g.cy <= reg.y + reg.height);
+  const tensor = locate1D(raster, 2).filter(inRegion);
+  const ai = mergeRegions([tensor, extra.filter(inRegion)], DEBLUR_MAX_REGIONS)
+    .slice(tensor.length)
+    .slice(0, DEBLUR_AI_REGIONS);
+  // Las cajas IA no tienen el respaldo del tensor (pueden caer en miniaturas o zonas con textura): exigen
+  // 3 líneas de acuerdo y ninguna discrepante (fase 10, B8). Un mismo número leído en dos regiones sale una vez.
+  const seen = new Set<string>();
+  return [
+    ...readBlurredEan(raster, { regions: tensor }),
+    ...readBlurredEan(raster, { regions: ai, minVotes: 3, unanimous: true }),
+  ]
+    .filter((r) => !seen.has(r.text) && seen.add(r.text) !== undefined)
     .map((r) => normalizeUpc(r, requested))
     .filter((r) => requested.includes(r.format) && !results.some((b) => contradicts(b, r)));
 }

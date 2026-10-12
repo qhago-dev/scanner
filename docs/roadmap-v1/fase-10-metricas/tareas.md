@@ -26,7 +26,7 @@ Orden: A completo → F10.L (línea base) → B8 → B10 (si procede) → B7 →
 
 ## B · Mejoras del motor (criterios: `requerimiento.md`)
 
-- [ ] **F10.8** Cajas IA → deblur · 1 d · `plugins.ts`, `core.ts`, `deblur/locate.ts`, `scanner/session.ts`
+- [x] **F10.8** Cajas IA → deblur · 1 d — **integrado detrás de `advanced.deblurProposals` (default false)**: +43 / −0 objetos en `public-blur/dev` (p < 0,001) pero 1 falsa nueva (alucinación consistente en 5 líneas) → no cumple el criterio 2; la parte de sesión no es aprobable con `device-cam` (sin IA) y no se integra. Defensa añadida para todos: ≥ 1,5 px/módulo · `plugins.ts`, `core.ts`, `deblur/locate.ts`, `scanner/session.ts`
   - [ ] `quadToRegions` con tests (caja rotada, casi cuadrada)
   - [ ] decode() y sesión (unión, ≤ 2 regiones IA); medida y `diff.ts`; changeset
 - [ ] ~~**F10.10** deblur EAN-8 en `decode()`~~ — **no se implementa**: brecha +4,5 / +6,9 pp < 10 pp (F10.L) · 2,5 d · `deblur/ean.ts`, `span.ts`, `index.ts`, `core.ts`

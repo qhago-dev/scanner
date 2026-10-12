@@ -268,3 +268,90 @@ export function profileAt(
   }
   return out;
 }
+
+/** Coherencia mínima del tensor dentro de una caja para fiarse de su orientación (si no, se prueban ambos ejes). */
+export const QUAD_MIN_COHERENCE = 0.5;
+
+type Pt = { x: number; y: number };
+
+/** Región 1D con eje `u` (unitario) que abarca el cuadrilátero, centrada en su centroide. */
+function regionAlong(quad: readonly Pt[], ux: number, uy: number, score: number): Region1D {
+  const cx = quad.reduce((s, p) => s + p.x, 0) / quad.length;
+  const cy = quad.reduce((s, p) => s + p.y, 0) / quad.length;
+  let u0 = Infinity;
+  let u1 = -Infinity;
+  let v0 = Infinity;
+  let v1 = -Infinity;
+  for (const p of quad) {
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    const u = dx * ux + dy * uy;
+    const v = -dx * uy + dy * ux;
+    u0 = Math.min(u0, u);
+    u1 = Math.max(u1, u);
+    v0 = Math.min(v0, v);
+    v1 = Math.max(v1, v);
+  }
+  // como en locate1D: la banda útil de las barras es la parte central
+  const vm = (v1 - v0) * 0.1;
+  return { cx, cy, ux, uy, u0, u1, v0: v0 + vm, v1: v1 - vm, score };
+}
+
+/**
+ * Fase 10 (B8): regiones 1D a partir de una caja propuesta (p. ej. por el detector IA). La orientación sale del
+ * tensor de estructura de los píxeles de la caja (el eje largo de una caja casi cuadrada o girada es ambiguo);
+ * si la coherencia es < QUAD_MIN_COHERENCE se devuelven los dos ejes de la caja.
+ */
+export function quadToRegions(r: Raster, quad: readonly Pt[], score = 1): Region1D[] {
+  const xs = quad.map((p) => p.x);
+  const ys = quad.map((p) => p.y);
+  const x0 = Math.max(1, Math.floor(Math.min(...xs)));
+  const x1 = Math.min(r.width - 2, Math.ceil(Math.max(...xs)));
+  const y0 = Math.max(1, Math.floor(Math.min(...ys)));
+  const y1 = Math.min(r.height - 2, Math.ceil(Math.max(...ys)));
+  if (x1 - x0 < 8 || y1 - y0 < 8) return [];
+  // muestreo: ~96 px a lo largo del lado mayor de la caja
+  const step = Math.max(1, Math.floor(Math.max(x1 - x0, y1 - y0) / 96));
+  const lum = luma(r);
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (let y = y0; y <= y1; y += step)
+    for (let x = x0; x <= x1; x += step) {
+      const gx = lum(x + 1, y) - lum(x - 1, y);
+      const gy = lum(x, y + 1) - lum(x, y - 1);
+      sxx += gx * gx;
+      syy += gy * gy;
+      sxy += gx * gy;
+    }
+  const e = sxx + syy;
+  const coh = e > 0 ? Math.sqrt((sxx - syy) ** 2 + 4 * sxy * sxy) / e : 0;
+  if (coh >= QUAD_MIN_COHERENCE) {
+    const th = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+    return [regionAlong(quad, Math.cos(th), Math.sin(th), score)];
+  }
+  const axis = (a: Pt, b: Pt) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const n = Math.hypot(dx, dy) || 1;
+    return [dx / n, dy / n] as const;
+  };
+  const [ax, ay] = axis(quad[0] as Pt, quad[1] as Pt);
+  const [bx, by] = axis(quad[0] as Pt, quad[3] as Pt);
+  return [regionAlong(quad, ax, ay, score), regionAlong(quad, bx, by, score)];
+}
+
+/** Une listas de regiones (en orden de prioridad) sin duplicados: centros a < 0,5 × ancho de la ya elegida. */
+export function mergeRegions(lists: readonly Region1D[][], max: number): Region1D[] {
+  const out: Region1D[] = [];
+  for (const g of lists.flat()) {
+    if (out.length >= max) break;
+    const dup = out.some(
+      (o) =>
+        Math.hypot(o.cx - g.cx, o.cy - g.cy) < 0.5 * (o.u1 - o.u0) &&
+        Math.abs(o.ux * g.ux + o.uy * g.uy) > 0.9,
+    );
+    if (!dup) out.push(g);
+  }
+  return out;
+}

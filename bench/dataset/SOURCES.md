@@ -21,3 +21,24 @@ sirven para evaluar; nunca para entrenar modelos publicados (ADR-09). Privacidad
 (499 / 425). Hasta el 2026-10-12 el split era `b < 3` dev / resto test, y el test antiguo se usó para decidir cambios
 a nivel de muestra (conflictos, verify, deblur). El dev nuevo = dev antiguo + 523 del test antiguo; test y holdout
 nuevos = 100 % del test antiguo → **semi-ciegos**. El estimador limpio será la captura `device` v2.
+
+## Conjuntos derivados de `public` (F10.3, `public/derive.py`)
+
+Localización con zxing-cpp Python **3.1.1** (opciones por defecto; la API 3.x no tiene `try_harder`): 1898 de 2605
+imágenes (73 %). La extensión de las barras sobre la línea central / largo del cuadrilátero tiene mediana 1,001 →
+`L` abarca solo las barras y el módulo es `L/95` (EAN-13) o `L/67` (EAN-8).
+
+| Dataset | Qué es | Muestras (dev / test / holdout) | Uso |
+|---|---|---|---|
+| `public-neg` | Recortes fuera de 1,5·L × 1,2·L, ≤ 2 por imagen, sin lectura de zxing-cpp, revisados a mano | 92 / 58 / 51 | Control de regresión de falsas de qhago (y qhago+ai). **No** compara motores |
+| `public-blur` | Imágenes `normal` con desenfoque gaussiano σ 0,6/0,9/1,2 módulos, disco y movimiento (varianza de σ 0,9), ruido σ 2, JPEG 85 | 4575 / 2885 / 1805 (EAN-8: 37 / 23 / 18 objetos) | Aprobar mejoras (B), **no** gates |
+
+Sesgos conocidos:
+- Solo imágenes que zxing-cpp localiza en nítido (las fáciles).
+- Negativas: filtradas por un lector de la familia zxing → FP ≈ 0 para zxing por construcción. Rendimiento bajo
+  (objetivo ≥ 200 en dev no alcanzado: 92): en estas fotos el código mide de mediana 1,4× el lado corto y casi no
+  queda zona libre. Plan B del SDD: se complementan con las 67 negativas de `device/dev`.
+- Revisión visual de las 206 negativas generadas: 5 con barras visibles (códigos secundarios: `public` es
+  `complete: false`) → `public/neg-exclude.txt`.
+- `public-blur`: el gaussiano coincide con el modelo del lector deblur (por eso las variantes disco/movimiento y el
+  control con `defocus` real y `device`). σ nominal: el desenfoque propio de la foto se suma.

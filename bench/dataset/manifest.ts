@@ -34,6 +34,10 @@ export const DATASETS: Record<string, string> = {
   real: join(HERE, "real/manifest.jsonl"),
   /** Datasets públicos reales (ArTe-Lab, KAIST, Muenster): public/fetch.sh + public/import.py. */
   public: join(HERE, "public/manifest.jsonl"),
+  /** Negativas derivadas de public (recortes sin código; control de regresión de qhago): public/derive.py. */
+  "public-neg": join(HERE, "public/manifest-neg.jsonl"),
+  /** Desenfoque derivado de public (gaussiano/disco/movimiento en módulos; aprueba mejoras, no gates). */
+  "public-blur": join(HERE, "public/manifest-blur.jsonl"),
   /** Fotos reales del modo depuración con veredicto manual (privado): device/build.py. */
   device: join(HERE, "device/manifest.jsonl"),
   synthetic: join(HERE, "synthetic/out/manifest.jsonl"),

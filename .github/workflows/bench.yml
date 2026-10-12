@@ -17,7 +17,7 @@ jobs:
       - uses: mymindstorm/setup-emsdk@v14
         with:
           version: "6.0.2"
-      - run: pip install pillow numpy opencv-python-headless && pip install --target bench/.pydeps zxing-cpp
+      - run: pip install pillow numpy opencv-python-headless && pip install --target bench/.pydeps zxing-cpp==3.1.1
       - run: bash packages/engine-wasm/build.sh all && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
       - run: bun install --frozen-lockfile && bun run --filter @qhago/scanner build
       - run: bun run bench/dataset/zxing.ts

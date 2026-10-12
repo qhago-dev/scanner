@@ -61,6 +61,9 @@ packages/scanner/e2e/vite-app/fixture.png
 packages/scanner/e2e/vite-app/.vite-*/
 packages/scanner/test/**/__screenshots__/
 bench/dataset/public/raw/
+bench/dataset/public/derived/
+bench/dataset/public/manifest-neg.jsonl
+bench/dataset/public/manifest-blur.jsonl
 apps/demo/video/out/
 
 # Capturas de prueba en dispositivo (privadas)

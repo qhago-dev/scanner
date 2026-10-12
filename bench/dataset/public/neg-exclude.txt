@@ -1,0 +1,7 @@
+# Negativas derivadas descartadas en la revisión visual (F10.3, 2026-10-12): recortes con barras visibles
+# (códigos secundarios sin etiquetar o fragmentos). Revisadas las 206; ver SOURCES.md.
+artelab-dataset1/05102009101#neg0
+artelab-dataset2/Foto(778)#neg1
+muenster/4013752021007-01-0#neg0
+muenster/4013752021007-01-0#neg1
+kaist-e8/29038206#neg0

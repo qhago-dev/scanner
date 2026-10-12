@@ -1,0 +1,18 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "../packages/scanner/src/index.ts",
+    "../packages/scanner/src/polyfill/index.ts",
+    "../packages/scanner/src/parsers/index.ts",
+    "../packages/scanner/src/ui/index.ts"
+  ],
+  "tsconfig": "../packages/scanner/tsconfig.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "api",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "hidePageHeader": true,
+  "entryFileName": "index.md",
+  "sanitizeComments": true
+}

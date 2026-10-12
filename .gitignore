@@ -79,3 +79,6 @@ packages/scanner/LICENSE
 packages/*/NOTICE
 packages/*/LICENSE-APACHE-2.0
 apps/tarball/results/
+docs-site/api/
+docs-site/.vitepress/dist/
+docs-site/.vitepress/cache/

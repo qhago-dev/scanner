@@ -1,0 +1,16 @@
+{
+  "name": "qhago-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "api": "typedoc",
+    "dev": "vitepress dev",
+    "build": "typedoc && vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-markdown": "^4.8.0",
+    "vitepress": "^1.6.0"
+  }
+}

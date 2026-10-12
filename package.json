@@ -6,7 +6,8 @@
     "packages/*",
     "apps/*",
     "apps/examples/*",
-    "bench"
+    "bench",
+    "docs-site"
   ],
   "scripts": {
     "build:wasm": "bash packages/engine-wasm/build.sh",
@@ -15,7 +16,8 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "bun run --filter '*' test",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "docs": "bun run --filter qhago-docs build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

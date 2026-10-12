@@ -1,0 +1,27 @@
+name: Error
+description: Algo no funciona (lectura fallida, lectura falsa, error al cargar…)
+labels: [bug]
+body:
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      options: [Lectura falsa (devuelve un valor incorrecto), No lee un código legible, Error/excepción, Rendimiento, Otro]
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Versión de @qhago/scanner }
+    validations: { required: true }
+  - type: input
+    id: entorno
+    attributes: { label: Entorno (navegador/SO o Node/Bun, dispositivo), placeholder: "Chrome 155 · Android 10 · Galaxy A…" }
+    validations: { required: true }
+  - type: textarea
+    id: pasos
+    attributes: { label: Pasos y código mínimo, render: ts }
+    validations: { required: true }
+  - type: textarea
+    id: diagnostico
+    attributes:
+      label: Diagnóstico
+      description: Salida de `diagnose()` o de `apps/demo/diagnostics.html`, y la imagen si puedes compartirla (sin datos personales).

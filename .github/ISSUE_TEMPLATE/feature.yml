@@ -1,0 +1,11 @@
+name: Propuesta
+description: Una función o mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problema
+    attributes: { label: Problema que resuelve }
+    validations: { required: true }
+  - type: textarea
+    id: propuesta
+    attributes: { label: Propuesta (API, ejemplo de uso) }

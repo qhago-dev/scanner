@@ -14,9 +14,12 @@ export interface GuardInput {
   runner: string;
   dataset: string;
   engines: string;
-  /** Carpeta de resultados (donde vive el registro). */
-  out: string;
+  /** Carpeta del registro (para logRun en tests; guardSplit usa siempre bench/results). */
+  out?: string;
 }
+
+/** Los registros de test/holdout viven siempre aquí, aunque el reporte se escriba con --out en otra carpeta. */
+export const RUNS_DIR = join(import.meta.dir, "results");
 
 /** Devuelve el mensaje de error o null si la ejecución está permitida. */
 export function checkSplit(g: Pick<GuardInput, "split" | "reason" | "holdoutOk">): string | null {
@@ -40,8 +43,9 @@ export function commitId(): string {
 /** Registra la ejecución si el split lo requiere. */
 export function logRun(g: GuardInput, date = new Date().toISOString().slice(0, 10)): string | null {
   if (g.split === "dev") return null;
-  const log = join(g.out, `${g.split}-runs.md`);
-  mkdirSync(g.out, { recursive: true });
+  const dir = g.out ?? RUNS_DIR;
+  const log = join(dir, `${g.split}-runs.md`);
+  mkdirSync(dir, { recursive: true });
   if (!existsSync(log))
     writeFileSync(
       log,
@@ -61,5 +65,5 @@ export function guardSplit(g: GuardInput): void {
     console.error(err);
     process.exit(2);
   }
-  logRun(g);
+  logRun({ ...g, out: RUNS_DIR });
 }

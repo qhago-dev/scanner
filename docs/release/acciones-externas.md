@@ -51,3 +51,8 @@ Preparadas en F0.8; ninguna se ha ejecutado. Orden recomendado:
 ## 11. Datos reales 2D (opcional)
 - [ ] Crear una cuenta en [BarBeR](https://ditto.ing.unimore.it/barber/) y descargar el dataset (8 748 imágenes 1D+2D
       con polígono y valor). Hoy `bench/dataset/public` solo tiene 1D reales (ArTe-Lab, KAIST, Muenster).
+
+## 9. Conjunto `device` v2 (F10.4)
+- [ ] Repartir productos en `bench/dataset/device/splits.json` y capturar según [docs/guias/captura-device.md](../guias/captura-device.md).
+- [ ] `bun run bench/coverage.ts --dataset device --strict` en verde (hoy: 4 productos en dev, 0 en test).
+- [ ] Clips reales cortos (5-10 s, mano en movimiento) para retomar M7 (promediado de perfiles entre frames).

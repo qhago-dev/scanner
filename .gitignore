@@ -71,3 +71,4 @@ apps/demo/debug-captures/
 
 # Conjunto device (fotos privadas del dispositivo)
 bench/dataset/device/manifest.jsonl
+bench/dataset/device/splits.json

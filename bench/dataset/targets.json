@@ -1,0 +1,7 @@
+{
+  "_doc": "Mínimos de captura por split (dev y test) para que los veredictos de device/public sean interpretables (F10.4). Objetos = productos distintos con código; negativas = muestras sin código.",
+  "splits": ["dev", "test"],
+  "objectsByFormat": { "ean_13|upc_a": 60, "ean_8": 15, "qr_code": 20, "code_128": 15 },
+  "negatives": 100,
+  "samplesPerScenario": 60
+}

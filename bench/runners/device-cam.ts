@@ -10,8 +10,10 @@ import { loadEngine } from "../../packages/scanner/src/engine/load-node";
 import { toRaster } from "../../packages/scanner/src/input/node";
 import { ScannerSession } from "../../packages/scanner/src/scanner/session";
 import { loadManifest } from "../dataset/manifest";
+import type { Detected } from "../engines/types";
 import { guardSplit } from "../guard";
 import { loadRgba } from "../image";
+import { equivalent } from "../metrics";
 
 const { values: a } = parseArgs({
   options: {
@@ -37,7 +39,6 @@ configure({
 });
 const SLOW = Number(a.slowdown);
 const DUR = Number(a.seconds) * 1000;
-const norm = (t: string) => t.replace(/^0+/, "");
 const tally: Record<string, { ok: number; n: number; t: number[] }> = {};
 const falses: string[] = [];
 const missed: string[] = [];
@@ -45,7 +46,7 @@ for (const s of loadManifest("device").filter(
   (x) => x.split === a.split && x.path.includes(a.only ?? ""),
 )) {
   const img = loadRgba(s.path);
-  const reads: { text: string; at: number }[] = [];
+  const reads: { format: Detected["format"]; text: string; at: number }[] = [];
   const session = new ScannerSession(
     {
       formats: FORMATS,
@@ -59,7 +60,7 @@ for (const s of loadManifest("device").filter(
     },
     { loadEngine, toRaster },
     (e) => {
-      if (e.type === "detect") reads.push({ text: e.result.text, at: -1 });
+      if (e.type === "detect") reads.push({ format: e.result.format, text: e.result.text, at: -1 });
     },
   );
   let busy = 0;
@@ -77,13 +78,14 @@ for (const s of loadManifest("device").filter(
   tally[cls] ??= { ok: 0, n: 0, t: [] };
   const c = tally[cls] as { ok: number; n: number; t: number[] };
   c.n++;
-  const want = s.codes[0]?.text;
-  const hit = reads.find((x) => want && norm(x.text) === norm(want));
-  if (hit) {
+  // Todos los códigos esperados leídos (equivalent(): GTIN-13 para EAN/UPC); el tiempo es el del último.
+  const hits = s.codes.map((c) => reads.find((x) => equivalent(c, x)));
+  if (s.codes.length && hits.every(Boolean)) {
     c.ok++;
-    c.t.push(hit.at);
+    c.t.push(Math.max(...hits.map((h) => h?.at ?? 0)));
   } else if (cls === "legible") missed.push(s.id);
-  for (const x of reads) if (!want || norm(x.text) !== norm(want)) falses.push(`${s.id}=${x.text}`);
+  for (const x of reads)
+    if (!s.codes.some((c) => equivalent(c, x))) falses.push(`${s.id}=${x.text}`);
 }
 const med = (v: number[]) => (v.length ? v.sort((x, y) => x - y)[v.length >> 1]?.toFixed(0) : "—");
 console.log(

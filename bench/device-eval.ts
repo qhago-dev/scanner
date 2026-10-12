@@ -6,10 +6,11 @@ import { parseArgs } from "node:util";
 import { loadManifest } from "./dataset/manifest";
 import { qhagoEngine } from "./engines/qhago";
 import { qhagoAiEngine } from "./engines/qhago-ai";
-import type { Engine } from "./engines/types";
+import type { Detected, Engine } from "./engines/types";
 import { zxingWasmEngine } from "./engines/zxing-wasm";
 import { guardSplit } from "./guard";
 import { loadRgba } from "./image";
+import { equivalent, scoreSample } from "./metrics";
 
 const { values: a } = parseArgs({
   options: {
@@ -36,10 +37,9 @@ const ENGINES: Record<string, () => Engine> = {
   "qhago+ai": () => qhagoAiEngine(),
   "zxing-wasm": zxingWasmEngine,
 };
-const norm = (t: string) => t.replace(/^0+/, "");
 const samples = loadManifest("device").filter((s) => s.split === a.split);
 const names = (a.engines ?? "").split(",");
-const detail: Record<string, Record<string, { got: string[]; ms: number }>> = {};
+const detail: Record<string, Record<string, { got: Detected[]; ms: number }>> = {};
 for (const n of names) {
   const e = ENGINES[n]?.();
   if (!e) throw new Error(`motor desconocido ${n}`);
@@ -49,24 +49,29 @@ for (const n of names) {
     const rgba = loadRgba(s.path);
     const t = performance.now();
     const r = await e.decode({ rgba });
-    detail[n][s.id] = { got: r.map((x) => x.text), ms: performance.now() - t };
+    detail[n][s.id] = {
+      got: r.map((x) => ({ format: x.format, text: x.text })),
+      ms: performance.now() - t,
+    };
   }
 }
 for (const n of names) {
   const row: string[] = [];
   const falses: string[] = [];
+  // Misma puntuación que el resto del bench (equivalent(): GTIN-13 para EAN/UPC, texto exacto para el resto).
+  const score = (s: (typeof samples)[number]) =>
+    scoreSample({ sample: s, detected: detail[n]?.[s.id]?.got ?? [], ms: 0 });
   for (const cls of ["legible", "dudosa", "sin-codigo"]) {
     const ss = samples.filter((s) => s.scenarios[0] === cls);
-    const ok = ss.filter((s) => {
-      const want = s.codes[0]?.text;
-      return want && detail[n]?.[s.id]?.got.some((g) => norm(g) === norm(want));
-    }).length;
+    const ok = ss.filter((s) => score(s).allFound).length;
     row.push(`${cls} ${ok}/${ss.length}`);
   }
   for (const s of samples) {
-    const want = new Set(s.codes.map((c) => norm(c.text)));
-    const bad = (detail[n]?.[s.id]?.got ?? []).filter((g) => !want.has(norm(g)));
-    if (bad.length) falses.push(`${s.id}=${bad.join("/")}`);
+    if (score(s).falseReads === 0) continue;
+    const bad = (detail[n]?.[s.id]?.got ?? []).filter(
+      (g) => !s.codes.some((c) => equivalent(c, g)),
+    );
+    falses.push(`${s.id}=${bad.map((g) => g.text).join("/")}`);
   }
   const ms = Object.values(detail[n] ?? {})
     .map((d) => d.ms)

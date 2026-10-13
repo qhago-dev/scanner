@@ -1,6 +1,6 @@
 {
   "name": "@qhago/scanner",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.0",
   "description": "Barcode & QR scanner for the web, Node and Bun — ZXing-C++ in WebAssembly, multi-frame fusion, optional AI detector.",
   "license": "MIT",
   "type": "module",

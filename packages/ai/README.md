@@ -1,8 +1,10 @@
 # @qhago/ai
 
-> **Experimental, sin publicar** (`"private": true`): no supera el gate G5 — ver [MODEL_CARD.md](./MODEL_CARD.md).
+> **Beta experimental** (`npm i @qhago/ai@beta onnxruntime-web`): aún no supera el gate G5 (falta medir la latencia en
+> Android de gama media y validar con códigos 2D reales) — ver [MODEL_CARD.md](./MODEL_CARD.md). En fotos públicas reales
+> sube la tasa de lectura de 80,9 % a 87,0 % (1 lectura falsa en 818 fotos).
 
-Detector de códigos **opcional** para [`@qhago/scanner`](../scanner). Cuando el motor clásico no lee nada durante
+Detector de códigos **opcional** para [`@qhago/scanner`](https://www.npmjs.com/package/@qhago/scanner). Cuando el motor clásico no lee nada durante
 unos frames, una red pequeña (CenterNet-lite, 0,22 M parámetros, 0,24 GMAC, 320×320) localiza los códigos y sus 4 esquinas;
 el motor rectifica cada región en su resolución original y la vuelve a leer.
 

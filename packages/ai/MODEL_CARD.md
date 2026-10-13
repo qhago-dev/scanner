@@ -1,6 +1,6 @@
 # Model card — detector-v1-lite (`@qhago/ai`)
 
-> **Estado: experimental, sin publicar** (`"private": true`). No supera el gate G5 (ver "Evaluación").
+> **Estado: beta experimental publicada** (2026-10-13, decisión del mantenedor). No supera el gate G5 (ver "Evaluación").
 > Solo es una ayuda para los casos en que el motor clásico no lee; no lo sustituye.
 
 ## Uso previsto
@@ -129,7 +129,10 @@ defecto) y solo en modo `fallback`.
 
 **Decisión (2026-10-10, revisada con fotos reales): sigue sin publicarse**, pero la evidencia real es favorable
 (+7 pp sin lecturas falsas extra). Faltan: latencia en `android-mid`, 2D reales y el subconjunto adverso etiquetado. El paquete queda en el repo como experimental, con `"private": true`; hay
-que quitarlo cuando pase G5. Para reconsiderarlo hace falta:
+que quitarlo cuando pase G5.
+
+**Actualización (2026-10-13):** se publica como beta experimental (dist-tag `beta`) por decisión del mantenedor; la 1.0
+sigue condicionada a G5. Para reconsiderarlo hace falta:
 
 1. El dataset real de F1, con `dev-train` y `dev-val`.
 2. Fondos fotográficos CC0.

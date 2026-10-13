@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: "22.14"
           registry-url: "https://registry.npmjs.org"
-      - run: npm install -g npm@^11.5.1
+      - run: npm install -g npm@^11.21.0   # 11.21+: dist-tag con OIDC
       - uses: oven-sh/setup-bun@v2
       - uses: mymindstorm/setup-emsdk@v14
         with:
@@ -53,6 +53,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+      # Mientras no haya 1.0, `latest` sigue a la última beta (changesets solo pone `beta`): así `npm i @qhago/x`
+      # y la página de npm muestran la versión real. Requiere "Allow npm dist-tag" en el Trusted Publisher.
+      - if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          node -e 'for (const p of JSON.parse(process.env.PUBLISHED)) console.log(p.name, p.version)' |
+          while read -r name v; do
+            cur=$(npm view "$name" dist-tags.latest 2>/dev/null || echo 0.0.0)
+            case "$cur" in 0.*) ;; *) continue ;; esac
+            npm dist-tag add "$name@$v" latest ||
+              echo "::warning::No se pudo mover latest de $name (activa 'Allow npm dist-tag' en el Trusted Publisher)"
+          done
       # F7.4: artefactos del motor y checksums en la GitHub Release que crea changesets (createGithubReleases).
       - if: steps.changesets.outputs.published == 'true'
         id: assets

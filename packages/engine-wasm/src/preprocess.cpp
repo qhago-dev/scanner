@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace qhago {
 
@@ -103,30 +104,77 @@ inline float Cubic(float x) {  // Catmull-Rom (a = -0.5)
 }
 }  // namespace
 
+namespace {
+// Pesos de un eje: para cada píxel de salida, el primer índice de origen (ya recortado al borde) y sus pesos
+// normalizados. Mismo núcleo y soporte que la versión 2D original (Catmull-Rom, ampliado al reducir).
+struct AxisTaps {
+  std::vector<int> start, count;
+  std::vector<int> index;    // índices de origen (recortados) concatenados
+  std::vector<float> weight;  // pesos normalizados concatenados
+};
+
+AxisTaps MakeTaps(int n, int dn) {
+  AxisTaps t;
+  t.start.resize(dn);
+  t.count.resize(dn);
+  const float s = static_cast<float>(n) / dn;
+  const float r = std::max(1.0f, s);
+  for (int o = 0; o < dn; ++o) {
+    const float c = (o + 0.5f) * s - 0.5f;
+    const int i0 = static_cast<int>(std::floor(c - 2 * r)) + 1, i1 = static_cast<int>(std::floor(c + 2 * r));
+    t.start[o] = static_cast<int>(t.index.size());
+    float sum = 0;
+    for (int i = i0; i <= i1; ++i) sum += Cubic((i - c) / r);
+    for (int i = i0; i <= i1; ++i) {
+      const float wgt = Cubic((i - c) / r);
+      if (wgt == 0) continue;
+      t.index.push_back(std::clamp(i, 0, n - 1));
+      t.weight.push_back(wgt / sum);
+    }
+    t.count[o] = static_cast<int>(t.index.size()) - t.start[o];
+  }
+  return t;
+}
+}  // namespace
+
+// Separable (horizontal y luego vertical) con pesos precalculados: el mismo filtro que el 2D original, ~10×
+// más rápido (una foto de 6,6 MP reducida a 2560 px pasaba de ~315 ms a decenas de ms). Las filas filtradas en
+// horizontal se calculan bajo demanda y se descartan cuando ya no se usan (memoria ≈ soporte × ancho de salida).
 Luma ResizeBicubic(const uint8_t* src, int w, int h, int dw, int dh) {
   Luma out(dw, dh);
-  const float sx = static_cast<float>(w) / dw, sy = static_cast<float>(h) / dh;
-  // Al reducir, ampliamos el soporte del filtro para evitar aliasing.
-  const float rx = std::max(1.0f, sx), ry = std::max(1.0f, sy);
-  for (int y = 0; y < dh; ++y) {
-    const float cy = (y + 0.5f) * sy - 0.5f;
-    const int y0 = static_cast<int>(std::floor(cy - 2 * ry)) + 1, y1 = static_cast<int>(std::floor(cy + 2 * ry));
-    for (int x = 0; x < dw; ++x) {
-      const float cx = (x + 0.5f) * sx - 0.5f;
-      const int x0 = static_cast<int>(std::floor(cx - 2 * rx)) + 1, x1 = static_cast<int>(std::floor(cx + 2 * rx));
-      float acc = 0, wsum = 0;
-      for (int yy = y0; yy <= y1; ++yy) {
-        const float wy = Cubic((yy - cy) / ry);
-        if (wy == 0) continue;
-        const uint8_t* row = src + static_cast<size_t>(std::clamp(yy, 0, h - 1)) * w;
-        for (int xx = x0; xx <= x1; ++xx) {
-          const float wgt = wy * Cubic((xx - cx) / rx);
-          acc += wgt * row[std::clamp(xx, 0, w - 1)];
-          wsum += wgt;
-        }
+  const AxisTaps tx = MakeTaps(w, dw);
+  const AxisTaps ty = MakeTaps(h, dh);
+  std::vector<std::vector<float>> rows(h);
+  int lowest = 0;  // filas < lowest ya liberadas
+  auto row = [&](int y) -> const std::vector<float>& {
+    std::vector<float>& r = rows[y];
+    if (r.empty()) {
+      r.resize(dw);
+      const uint8_t* s = src + static_cast<size_t>(y) * w;
+      for (int x = 0; x < dw; ++x) {
+        float acc = 0;
+        const int b = tx.start[x];
+        for (int k = 0; k < tx.count[x]; ++k) acc += tx.weight[b + k] * s[tx.index[b + k]];
+        r[x] = acc;
       }
-      out.px[static_cast<size_t>(y) * dw + x] = static_cast<uint8_t>(std::clamp(acc / wsum + 0.5f, 0.0f, 255.0f));
     }
+    return r;
+  };
+  std::vector<float> acc(dw);
+  for (int y = 0; y < dh; ++y) {
+    const int b = ty.start[y], n = ty.count[y];
+    // Libera las filas que ya no usará ninguna salida posterior (los índices de origen crecen con y).
+    int minIdx = h;
+    for (int k = 0; k < n; ++k) minIdx = std::min(minIdx, ty.index[b + k]);
+    for (; lowest < minIdx; ++lowest) std::vector<float>().swap(rows[lowest]);
+    std::fill(acc.begin(), acc.end(), 0.0f);
+    for (int k = 0; k < n; ++k) {
+      const std::vector<float>& r = row(ty.index[b + k]);
+      const float wgt = ty.weight[b + k];
+      for (int x = 0; x < dw; ++x) acc[x] += wgt * r[x];
+    }
+    uint8_t* dst = out.px.data() + static_cast<size_t>(y) * dw;
+    for (int x = 0; x < dw; ++x) dst[x] = static_cast<uint8_t>(std::clamp(acc[x] + 0.5f, 0.0f, 255.0f));
   }
   return out;
 }

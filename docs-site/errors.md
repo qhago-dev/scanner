@@ -62,5 +62,5 @@ cancelación, no como fallo.
 
 ## Lecturas incorrectas
 
-Una lectura con un valor distinto del real es el fallo más grave para la librería: [repórtalo](https://github.com/qhago/scanner/issues/new?template=bug.yml)
+Una lectura con un valor distinto del real es el fallo más grave para la librería: [repórtalo](https://github.com/qhago-dev/scanner/issues/new?template=bug.yml)
 con la imagen. Para reducir el riesgo: pide solo los formatos que usas, deja `validateChecksums` activado y usa un ROI.

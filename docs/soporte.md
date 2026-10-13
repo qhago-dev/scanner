@@ -2,7 +2,7 @@
 
 ## Plataformas
 
-La tabla de plataformas soportadas vive en el [README del roadmap](https://github.com/qhago/scanner/blob/master/docs/roadmap-v1/README.md#plataformas-soportadas-fuente-única-el-resto-de-documentos-remiten-aquí)
+La tabla de plataformas soportadas vive en el [README del roadmap](https://github.com/qhago-dev/scanner/blob/master/docs/roadmap-v1/README.md#plataformas-soportadas-fuente-única-el-resto-de-documentos-remiten-aquí)
 (fuente única). Resumen: Chrome/Edge y Samsung Internet (últimas 2), Firefox (últimas 2 + ESR), Safari ≥ 16.4
 (macOS/iOS), Node ≥ 22.12, Bun ≥ 1.2; Deno en modo best effort. `createScanner()` (cámara) solo en navegador.
 

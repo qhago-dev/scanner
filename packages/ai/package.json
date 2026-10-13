@@ -1,6 +1,6 @@
 {
   "name": "@qhago/ai",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.0",
   "description": "Optional AI barcode detector plugin for @qhago/scanner (ONNX Runtime Web, WebGPU/WASM).",
   "license": "MIT",
   "type": "module",

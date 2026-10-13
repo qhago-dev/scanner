@@ -3,7 +3,24 @@
   "tag": "beta",
   "initialVersions": {
     "@qhago/engine-wasm": "0.0.0",
-    "@qhago/scanner": "0.0.0"
+    "@qhago/scanner": "0.0.0",
+    "@qhago/ai": "0.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "ai-duty-weak-fusion",
+    "api-freeze-beta",
+    "bundle-wasm-hint",
+    "deblur-ean",
+    "deblur-proposals",
+    "deblur-work-gates",
+    "engine-decode",
+    "linear-conflicts",
+    "low-confidence-ean",
+    "package-types-licenses",
+    "plugin-verify",
+    "resize-separable",
+    "sweep-slices",
+    "verify-harder",
+    "worker-pacing"
+  ]
 }

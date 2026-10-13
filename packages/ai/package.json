@@ -52,7 +52,7 @@
     "test:browser": "vitest run --project browser"
   },
   "peerDependencies": {
-    "@qhago/scanner": ">=0.0.0-0 <1.0.0",
+    "@qhago/scanner": ">=0.1.0-beta.0",
     "onnxruntime-web": "^1.22.0"
   },
   "devDependencies": {

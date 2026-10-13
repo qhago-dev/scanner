@@ -54,8 +54,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: node packages/scanner/scripts/copy-wasm.mjs
       - run: bun run lint
-      # @qhago/ai y bench resuelven los tipos de @qhago/scanner desde dist/types: hay que construir antes.
-      - run: bun run --filter @qhago/scanner build
+      # @qhago/ai, bench y los ejemplos resuelven tipos desde dist/types: hay que construir antes del typecheck.
+      - run: bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build
       - run: bun run typecheck
       - run: cd packages/scanner && bun scripts/api-report.ts --check
       - run: bun run test
@@ -66,7 +66,6 @@ jobs:
       - run: cd packages/scanner && QHAGO_BROWSERS=firefox,webkit bunx vitest run --project browser
       # Cámara simulada en Firefox (shim). WebKit en Linux no reproduce captureStream: Safari va en la matriz manual.
       - run: cd packages/scanner && bunx vitest run --project camera
-      - run: bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build
       # F7.2: el paquete publicable (tarball real) pasa publint y attw (tipos resolubles en ESM/node16 y bundlers)
       - run: cd packages/scanner && bunx publint && bunx @arethetypeswrong/cli --pack --profile esm-only
       - run: cd packages/ai && bunx publint && bunx @arethetypeswrong/cli --pack --profile esm-only

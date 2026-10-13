@@ -84,3 +84,4 @@ docs-site/.vitepress/dist/
 docs-site/.vitepress/cache/
 bench/results/f10-cierre/*.json
 bench/results/f10-comparativa/*.json
+bench/results/f10-latencia/*.json

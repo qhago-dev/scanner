@@ -12,18 +12,20 @@ Librería de escaneo de códigos de barras y QR para **navegador, Node y Bun**, 
 
 ## Resultados medidos
 
-Benchmark reproducible de `bench/` (2026-10-12, commit `f686758`, split `test` de fotos públicas reales EAN-13/EAN-8 de
-ArTe-Lab, KAIST y Muenster; i9-12900H, Bun). Informe: [`bench/results/f10-cierre/`](./bench/results/f10-cierre/).
+Benchmark reproducible de `bench/` (2026-10-13, commit `68b37c2`, split `test` de fotos públicas reales EAN-13/EAN-8 de
+ArTe-Lab, KAIST y Muenster; i9-12900H, Bun). Informe: [`bench/results/f10-latencia/`](./bench/results/f10-latencia/).
 
-| Motor | Lee | Lecturas falsas | Desenfocadas | p50 |
-|---|---|---|---|---|
-| **qhago** (`balanced`) | **80,9 %** | **0** de 818 | **59,4 %** | 20 ms |
-| qhago + detector IA (experimental) | 87,0 % | 1 | 62,3 % | 26 ms |
-| zxing-wasm 3.1.5 | 71,9 % | 14 | 7,2 % | 17 ms |
+| Motor | Lee | Lecturas falsas | Desenfocadas | p50 | p95 |
+|---|---|---|---|---|---|
+| **qhago** (`balanced`) | **80,9 %** | **0** de 818 | **59,4 %** | 16 ms | 271 ms |
+| qhago + detector IA (experimental) | 87,0 % | 1 | 62,3 % | 21 ms | 395 ms |
+| zxing-wasm 3.1.5 | 71,9 % | 14 | 7,2 % | 16 ms | 103 ms |
+| zxing-js 0.21.3 | 58,4 % | 8 | 2,9 % | 19 ms | 110 ms |
+| Quagga2 1.12.1 | 42,5 % | 21 | 0 % | 36 ms | 73 ms |
 
 qhago − zxing-wasm: **+9,0 pp** (IC 95 % [+5,5; +12,6], comparación pareada por objeto). Sin las fotos de Muenster
-(licencia solo de investigación): qhago 74,0 %, zxing-wasm 62,6 %. Fotos > 4 MP: la cola llega a p95 ≈ 0,5 s y
-p99 ≈ 0,9 s en escritorio (ver la guía de archivos). El split `test` ya se había usado antes en el desarrollo: es un
+(licencia solo de investigación): qhago 74,0 %, zxing-wasm 62,6 %. La cola (p95) es mayor que la del resto porque
+qhago sigue intentando donde los demás se rinden (lector de desenfoque, pasadas extra): ver la guía de archivos. El split `test` ya se había usado antes en el desarrollo: es un
 control de regresión, no una estimación ciega; la validación con fotos propias del dispositivo está pendiente
 (`docs/guias/captura-device.md`). Metodología y resto de conjuntos: `bench/README.md` y el sitio de docs.
 

@@ -9,3 +9,4 @@
 | 2026-10-12 | f686758 | public-blur | qhago,qhago+ai,zxing-wasm | Cierre F10 (control de regresión semi-ciego) | cli |
 | 2026-10-13 | ad12c4c | public | qhago,zxing-js,quagga2 | Comparativa final con zxing-js y Quagga2 (sin cambios de código) | cli |
 | 2026-10-13 | ad12c4c | public-neg | qhago,zxing-js,quagga2 | Comparativa final con zxing-js y Quagga2 (sin cambios de código) | cli |
+| 2026-10-13 | 68b37c2 | public | qhago,qhago+ai,zxing-wasm,zxing-js,quagga2 | Comparativa tras arreglos de latencia (redimensionado separable y cortes del lector deblur) | cli |

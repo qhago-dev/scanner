@@ -54,6 +54,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: node packages/scanner/scripts/copy-wasm.mjs
       - run: bun run lint
+      # @qhago/ai y bench resuelven los tipos de @qhago/scanner desde dist/types: hay que construir antes.
+      - run: bun run --filter @qhago/scanner build
       - run: bun run typecheck
       - run: cd packages/scanner && bun scripts/api-report.ts --check
       - run: bun run test

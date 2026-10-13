@@ -200,9 +200,11 @@ for (const app of apps) {
   let got;
   try {
     cpSync(join(HERE, app), d, { recursive: true });
+    // public/ (Vite, Astro, Next) se crea siempre: git no guarda directorios vacíos.
+    mkdirSync(join(d, "public"), { recursive: true });
     for (const f of ["fixture.png", "fixture.jpg"]) {
       cpSync(join(HERE, f), join(d, f));
-      if (existsSync(join(d, "public"))) cpSync(join(HERE, f), join(d, "public", f));
+      cpSync(join(HERE, f), join(d, "public", f));
     }
     const pj = join(d, "package.json");
     writeFileSync(pj, readFileSync(pj, "utf8").replace("QHAGO_TARBALL", `file:${tarball}`));

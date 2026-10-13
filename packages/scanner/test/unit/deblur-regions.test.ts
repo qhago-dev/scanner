@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { deblurExtras, deblurFallback, proposalRegions } from "../../src/core";
+import { readBlurredEan } from "../../src/deblur";
 import { fitSpan, MIN_SAMPLES_PER_MODULE } from "../../src/deblur/ean";
-import { mergeRegions, quadToRegions, type Region1D } from "../../src/deblur/locate";
+import { locate1D, mergeRegions, quadToRegions, type Region1D } from "../../src/deblur/locate";
 import type { Raster } from "../../src/engine/engine";
 import { image, modules } from "../deblur-fixture";
 
@@ -120,5 +121,15 @@ describe("regiones del lector deblur a partir de cajas (fase 10, B8)", () => {
     expect(deblurExtras(r, props, {})).toEqual([]);
     expect(deblurExtras(r, props, { advanced: { deblurProposals: false } })).toEqual([]);
     expect(deblurExtras(r, props, { advanced: { deblurProposals: true } })).toHaveLength(1);
+  });
+});
+
+describe("cortes de trabajo del lector deblur (fase 10, latencia)", () => {
+  it("mismo resultado con y sin corte de región en un EAN desenfocado", () => {
+    const r = image("7501033204265", 4, 0.6, 12, 6);
+    const regs = locate1D(r, 2);
+    expect(readBlurredEan(r, { regions: regs }).map((x) => x.text)).toEqual(
+      readBlurredEan(r, { regions: regs, gateLines: 0 }).map((x) => x.text),
+    );
   });
 });

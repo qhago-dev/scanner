@@ -13,6 +13,13 @@ export interface DeblurOptions {
   lines?: number;
   /** Alturas concretas (0..1) a lo largo de las barras; sustituye a `lines`. */
   fracs?: number[];
+  /**
+   * Si las `gateLines` primeras líneas no llegan a `gateFit` de ajuste, se abandona la región (fase 10, latencia:
+   * en la cola de public/dev ahorra ~40 % de las líneas sin perder regiones aceptables; 0,6 y no 0,7 porque con 0,7
+   * se perdía una foto real del Android cuyas líneas centrales eran las malas). 0 lo desactiva.
+   */
+  gateLines?: number;
+  gateFit?: number;
   /** Umbrales de aceptación (medidos en fotos reales: correctas ≥ 0,86, falsas ≤ 0,85). */
   minFit?: number;
   minMargin?: number;
@@ -33,8 +40,13 @@ const enc = new TextEncoder();
 export function readBlurredEan(r: Raster, o: DeblurOptions = {}): BarcodeResult[] {
   const regions = o.regions ?? locate1D(r, o.maxRegions ?? 2);
   const n = o.lines ?? 5;
+  // Alturas a lo largo de las barras, del centro hacia fuera: las centrales son las que más leen (las de los
+  // extremos caen a veces fuera de las barras), así que deciden antes si la región merece el resto.
   const fracs =
-    o.fracs ?? Array.from({ length: n }, (_, li) => (n === 1 ? 0.5 : 0.15 + (0.7 * li) / (n - 1)));
+    o.fracs ??
+    Array.from({ length: n }, (_, li) => (n === 1 ? 0.5 : 0.15 + (0.7 * li) / (n - 1))).sort(
+      (x, y) => Math.abs(x - 0.5) - Math.abs(y - 0.5) || x - y,
+    );
   const lines = fracs.length;
   const minFit = o.minFit ?? 0.85;
   const minMargin = o.minMargin ?? 0.8;
@@ -46,7 +58,11 @@ export function readBlurredEan(r: Raster, o: DeblurOptions = {}): BarcodeResult[
       { n: number; fit: number; a: number; b: number; frac: number[] }
     >();
     let other = 0;
+    let bestSoFar = 0;
+    const gateLines = o.gateLines ?? ((o.mode ?? "full") === "full" ? 2 : 0);
+    const gateFit = o.gateFit ?? 0.6;
     for (let li = 0; li < lines; li++) {
+      if (gateLines > 0 && li === gateLines && bestSoFar < gateFit) break;
       const frac = fracs[li] as number;
       const prof = profileAt(r, g, frac);
       if (!prof) continue;
@@ -54,6 +70,7 @@ export function readBlurredEan(r: Raster, o: DeblurOptions = {}): BarcodeResult[
       if (!q) continue;
       const best = fitSpans(q, findSpans(q), o.mode ?? "full");
       if (!best) continue;
+      bestSoFar = Math.max(bestSoFar, best.fit);
       if (best.fit >= minFit && best.margin >= minMargin) {
         const v = votes.get(best.text) ?? { n: 0, fit: 0, a: best.start, b: best.end, frac: [] };
         v.n++;

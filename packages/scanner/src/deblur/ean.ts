@@ -362,6 +362,13 @@ function search(
  */
 export const MIN_SAMPLES_PER_MODULE = 3;
 
+/**
+ * Corte del afinado en modo "full" (fase 10, latencia): un tramo cuyo mejor ajuste grueso queda por debajo no se
+ * afina. Medido en la cola de public/dev: ningún ajuste aceptable (≥ 0,85) partía de un grueso < 0,785; con 0,7
+ * se evita el afinado en ~50 % de los tramos.
+ */
+export const REFINE_GATE = 0.7;
+
 const COARSE: [number, number, number, number][] = [];
 const COARSE_FULL: [number, number, number, number][] = [];
 for (const dl of [-1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2])
@@ -398,7 +405,7 @@ export function fitSpans(
     if (w0 < MIN_SAMPLES_PER_MODULE) continue;
     let g = search(q, a, w0, full ? COARSE_FULL : COARSE, null);
     if (!g) continue;
-    if (full) g = refine(a, w0, g);
+    if (full && g.fit >= REFINE_GATE) g = refine(a, w0, g);
     if (!best || g.fit > best.g.fit) best = { g, a, w0 };
   }
   if (!best) return null;

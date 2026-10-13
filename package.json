@@ -11,12 +11,15 @@
   ],
   "scripts": {
     "build:wasm": "bash packages/engine-wasm/build.sh",
-    "build": "bun run --filter '@qhago/*' build",
+    "build": "bun run --filter @qhago/scanner build && bun run --filter @qhago/ai build",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "bun run --filter '*' test",
     "changeset": "changeset",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry-run",
+    "release:local": "node scripts/release.mjs --local",
     "docs": "bun run --filter qhago-docs build"
   },
   "devDependencies": {

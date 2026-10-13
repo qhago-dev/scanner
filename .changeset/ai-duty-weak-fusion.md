@@ -1,6 +1,5 @@
 ---
 "@qhago/scanner": patch
-"@qhago/ai": patch
 ---
 
 Cámara: la inferencia del detector IA en vídeo se limita al 25 % del tiempo (en un Android de gama media cada

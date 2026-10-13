@@ -1,6 +1,5 @@
 ---
 "@qhago/scanner": patch
-"@qhago/ai": patch
 ---
 
 Paquete: los tipos (`.d.ts`) usan imports con extensión y resuelven con `moduleResolution: node16/nodenext`

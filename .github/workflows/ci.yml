@@ -50,7 +50,7 @@ jobs:
         with:
           name: engine-wasm
           path: packages/engine-wasm/out
-      - run: pip install pillow && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
+      - run: pip install pillow && python3 packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
       - run: bun install --frozen-lockfile
       - run: node packages/scanner/scripts/copy-wasm.mjs
       - run: bun run lint
@@ -123,7 +123,7 @@ jobs:
         with:
           name: engine-wasm
           path: packages/engine-wasm/out
-      - run: pip install pillow && python3 -I packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
+      - run: pip install pillow && python3 packages/engine-wasm/test/prepare-samples.py packages/engine-wasm/vendor/zxing-cpp/test/samples packages/engine-wasm/build/samples
       - run: bun install --frozen-lockfile && node packages/scanner/scripts/copy-wasm.mjs
       - run: cd packages/scanner && npx vitest run --project node
 

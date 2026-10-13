@@ -12,7 +12,7 @@ mkdir -p "$OUT"
 SRC=("$HERE/src/cascade.cpp" "$HERE/src/preprocess.cpp" "$HERE/third_party/stb_image_impl.cpp" "$HERE/test/parity_main.cpp")
 INC=(-I "$VENDOR/core/src" -I "$HERE/src" -I "$HERE/third_party")
 
-python3 -I "$HERE/test/prepare-samples.py" "$VENDOR/test/samples" "$SAMPLES" >/dev/null
+python3 "$HERE/test/prepare-samples.py" "$VENDOR/test/samples" "$SAMPLES" >/dev/null
 
 # 1) Nativo
 if [[ ! -f "$BUILD/native-zxing/core/libZXing.a" ]]; then

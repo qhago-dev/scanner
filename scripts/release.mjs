@@ -32,8 +32,12 @@ if (!dry) {
   if (out("git", ["branch", "--show-current"]) !== "master") fail("publica desde master");
   if (out("git", ["status", "--porcelain"])) fail("hay cambios sin commitear");
   run("git", ["fetch", "origin", "master"]);
-  if (out("git", ["rev-parse", "HEAD"]) !== out("git", ["rev-parse", "origin/master"]))
-    fail("master no coincide con origin/master (haz pull/push antes)");
+  // Ir por delante de origin vale (el push final sube esos commits); ir por detrás o divergir, no.
+  try {
+    out("git", ["merge-base", "--is-ancestor", "origin/master", "HEAD"]);
+  } catch {
+    fail("a master le faltan commits de origin/master (haz git pull --rebase antes)");
+  }
 }
 
 // 2. Hay algo que publicar.

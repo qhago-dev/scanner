@@ -43,7 +43,7 @@ jobs:
         run: |
           bunx changeset status --verbose
           for p in packages/scanner packages/ai; do [ -f "$p/package.json" ] && (cd "$p" && npm publish --dry-run --provenance --access public) || true; done
-      - if: github.event_name == 'push'
+      - if: github.event_name == 'push' || !inputs.dry-run
         id: changesets
         uses: changesets/action@v1
         with:

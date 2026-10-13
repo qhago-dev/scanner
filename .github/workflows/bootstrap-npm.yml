@@ -30,10 +30,10 @@ jobs:
           for name in @qhago/scanner @qhago/ai; do
             dir=$(mktemp -d)
             cat > "$dir/package.json" <<JSON
-          {"name":"$name","version":"0.0.0","description":"Reservado: en desarrollo. Usa @alpha.","license":"MIT",
+          {"name":"$name","version":"0.0.0","description":"Reservado: en desarrollo. Usa @beta.","license":"MIT",
            "repository":{"type":"git","url":"git+https://github.com/${{ github.repository }}.git"}}
           JSON
-            printf '# %s\n\nPaquete en desarrollo. Instala la pre-release: `npm i %s@alpha`.\n' "$name" "$name" > "$dir/README.md"
+            printf '# %s\n\nPaquete en desarrollo. Instala la pre-release: `npm i %s@beta`.\n' "$name" "$name" > "$dir/README.md"
             (cd "$dir" && npm publish --access public --provenance)
-            npm deprecate "$name@0.0.0" "Paquete en desarrollo: usa $name@alpha"
+            npm deprecate "$name@0.0.0" "Paquete en desarrollo: usa $name@beta"
           done

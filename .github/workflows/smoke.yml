@@ -28,12 +28,12 @@ jobs:
         run: |
           mkdir -p /tmp/smoke && cd /tmp/smoke
           echo '{"name":"smoke","private":true,"type":"module"}' > package.json
-          for i in 1 2 3 4 5; do   # el registro puede tardar en propagar la versión
+          for i in $(seq 12); do   # el registro (y su caché) puede tardar minutos en propagar la versión
             case "${{ matrix.pm }}" in
-              npm) npm i "${{ inputs.spec }}" && break ;;
+              npm) npm i --prefer-online "${{ inputs.spec }}" && break ;;
               pnpm) pnpm add "${{ inputs.spec }}" && break ;;
               yarn) yarn add "${{ inputs.spec }}" && break ;;
-              bun) bun add "${{ inputs.spec }}" && break ;;
+              bun) bun add --no-cache "${{ inputs.spec }}" && break ;;
             esac
             sleep 30
           done

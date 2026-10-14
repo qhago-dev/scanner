@@ -40,6 +40,11 @@ Para que la librería sea usable por terceros tiene que instalarse sin fricción
 ## Criterios de aceptación
 
 ### G7a — antes de publicar 1.0 (verificado sobre la última `0.x.y-rc.N`)
+
+> F12: en modo pre todas las versiones salen de `0.1.0` hasta el changeset `major`, así que el RC será `0.1.0-rc.N`
+> (o `1.0.0-rc.N` si ya lleva el `major`). Ambos los admite el peer de `@qhago/ai`; `scripts/check-peer.mjs` falla
+> si una versión de `@qhago/scanner` quedara fuera.
+
 - [ ] Toda la DoD de `docs/roadmap-v1/README.md` en verde, con evidencia enlazada.
 - [ ] `npx publint` y `npx @arethetypeswrong/cli --pack --profile esm-only` sin errores.
 - [ ] CI de ejemplos verde (las 11 apps) usando el tarball del RC.

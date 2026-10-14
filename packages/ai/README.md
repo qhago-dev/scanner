@@ -21,6 +21,12 @@ await scanner.start();
 
 También funciona con `decode(image, { workerFactory: aiWorker, plugins: [aiDetector()] })`.
 
+## Versiones compatibles
+
+`@qhago/ai` declara `@qhago/scanner` como peer con el rango `>=0.1.0-beta.0 <2.0.0 || >=1.0.0-0 <2.0.0`. Admite las
+betas y RC actuales, `1.0.0-beta`/`1.0.0-rc` y toda la 1.x. Con `@qhago/ai@0.1.0-beta.0`, npm rechaza (`ERESOLVE`)
+`@qhago/scanner@1.0.0-rc`: actualiza a `0.1.0-beta.1` o posterior.
+
 ## Opciones
 
 | Opción | Default | |

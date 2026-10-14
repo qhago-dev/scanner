@@ -175,3 +175,5 @@ jobs:
       - run: bun install --frozen-lockfile
       # F6.6: licencias + bun audit del cierre publicado (scanner, ai); lo de desarrollo solo avisa.
       - run: node scripts/check-deps.mjs
+      # F12: el peer de @qhago/ai admite la versión de @qhago/scanner (y el camino a 1.0): si no, npm da ERESOLVE.
+      - run: node scripts/check-peer.mjs

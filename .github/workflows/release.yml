@@ -39,6 +39,7 @@ jobs:
       - run: bash packages/engine-wasm/build.sh all
       - run: bun run build
       - run: bun run test
+      - run: node scripts/check-peer.mjs   # F12: peer de @qhago/ai y plan de changesets
       - if: github.event_name == 'workflow_dispatch' && inputs.dry-run
         run: |
           bunx changeset status --verbose

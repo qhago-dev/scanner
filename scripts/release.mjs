@@ -81,6 +81,7 @@ if (!existsSync(join(ROOT, "packages/engine-wasm/out/browser"))) {
   }
 }
 run("bun", ["run", "lint"]);
+run("node", ["scripts/check-peer.mjs"]);
 run("bun", ["run", "build"]);
 run("bun", ["run", "typecheck"]);
 run("bun", ["run", "test"]);
@@ -101,6 +102,7 @@ if (dry) {
 // 4. Versión + CHANGELOG, commit y push (o publicación local).
 run("bunx", ["changeset", "version"]);
 run("bun", ["install"]);
+run("node", ["scripts/check-peer.mjs"]); // F12: con las versiones nuevas, antes de commitear
 const published = PKGS.map(version).filter((p) => !p.private);
 const tag = published.map((p) => `${p.name}@${p.version}`).join(", ");
 run("git", ["add", "-A"]);

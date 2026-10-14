@@ -1,5 +1,18 @@
 # Registro de revisión de los SDD
 
+## Fase 11 v2 — 2026-10-13 (revisión independiente)
+
+- v1 → NO APROBADO (4 bloqueantes): el e2e "con IA" en modo `fallback` con un fixture nítido nunca ejecuta la IA;
+  código de error inventado (`CAMERA_DENIED` → `PERMISSION_DENIED`, más `NO_CAMERA`, `CAMERA_IN_USE`,
+  `INSECURE_CONTEXT`); `workflow_call` con una sola versión para dos paquetes no agrupados por changesets; ffmpeg
+  no viene en ubuntu-latest y el generador del y4m ya existía.
+- v2 (aplicada al implementar, decisiones delegadas por el autor): `?ai=always` en el e2e de IA (verifica `.onnx`,
+  `ort-wasm*.wasm` y lectura, ≤ 60 s); códigos reales con ayuda por código; `release.yml` exporta `scanner` y `ai`;
+  `apt-get install ffmpeg` y `make-video.sh` adaptado; issue automático si falla tras Release o en el canario;
+  peso definido (inicial ≤ 60 KB, sin IA ≤ 450 KB); e2e `vite dev` en la prueba de plantilla; dos entradas de foto
+  (galería / cámara); `tsconfig` autónomo; rutas de Pages desde `configure-pages`. Hallazgo nuevo (fuera de
+  alcance): el peer de `@qhago/ai` no admite prereleases de otra minor.
+
 ## Fase 10 v3 — 2026-10-12 (tres pasadas de revisión independiente)
 
 Resultado final: **APROBADO** (0 bloqueantes, 0 importantes; 2 menores y 2 dudas aplicados).

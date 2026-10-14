@@ -103,6 +103,7 @@ La v1.0.0 está lista para publicar cuando **todos** estos puntos están en verd
 | 8 | [Post-1.0](./fase-8-post-1.0/) | React/Vue, Capacitor, RN, nativo | F7 | — | `1.x` | Pendiente |
 | 9 | [Escáner para tiendas](./fase-9-tienda/) | Ritmo del worker, IA acotada, lector deblur-EAN | F3 | — | — | Hecha (M7 pendiente) |
 | 10 | [Métricas fiables y mejoras medibles](./fase-10-metricas/) | Splits con holdout, negativas y desenfoque derivados, `device` v2, latencia; IA → deblur, EAN-8, cola de latencia | F9 | 9-10 d | — | Hecha ([cierre](../../bench/results/2026-10-12-f10-cierre.md); captura `device` v2 pendiente) |
+| 11 | [Demo pública](./fase-11-demo-publico/) | `showcase/` con los paquetes de npm: escaparate, plantilla y e2e continuo de lo publicado; Pages `/demo/` | F7 | 3-4 d | — | Hecha en local (Pages, Dependabot y prueba en móviles reales: autor) |
 
 ```
 F0 ──► F1 ──────────────(G2, G3 necesitan F1)─────────────► F5.1-F5.4 (entrenamiento)

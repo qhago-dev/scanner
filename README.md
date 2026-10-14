@@ -10,6 +10,9 @@ Librería de escaneo de códigos de barras y QR para **navegador, Node y Bun**, 
 - Preproceso clásico (contraste local, multiescala) y, de forma opcional, un **detector IA** (`@qhago/ai`).
 - Polyfill de `BarcodeDetector` y capa de compatibilidad con Quagga2.
 
+**Demo:** [qhago.dev/demo](https://qhago.dev/demo/) (ábrela en el móvil). Su código, [`showcase/`](./showcase/), es una plantilla
+que usa los paquetes publicados en npm: `npx degit qhago-dev/scanner/showcase mi-app`.
+
 ## Resultados medidos
 
 Benchmark reproducible de `bench/` (2026-10-13, commit `68b37c2`, split `test` de fotos públicas reales EAN-13/EAN-8 de
@@ -35,7 +38,8 @@ control de regresión, no una estimación ciega; la validación con fotos propia
 packages/engine-wasm   Build de ZXing-C++ + bridge + preproceso → WASM
 packages/scanner       @qhago/scanner (TS)
 packages/ai            @qhago/ai (detector opcional)
-apps/demo              Demo web y herramienta de captura
+apps/demo              Laboratorio interno (captura de dataset, bench en dispositivo)
+showcase/              Demo pública y plantilla, con los paquetes de npm (fuera de los workspaces)
 bench/                 Benchmark contra competidores
 training/              Entrenamiento del detector
 docs/roadmap-v1/       Roadmap SDD (requerimientos, diseño y tareas por fase)

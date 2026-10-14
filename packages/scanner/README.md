@@ -1,6 +1,6 @@
 # @qhago/scanner
 
-> API congelada para 1.0 (`api/public-api.md`). Documentación: https://qhago.dev/docs/
+> API congelada para 1.0 (`api/public-api.md`). Documentación: https://qhago.dev/docs/ · Demo: https://qhago.dev/demo/
 
 Lectura de códigos de barras y QR en **navegador, Node y Bun** con ZXing-C++ compilado a WebAssembly.
 

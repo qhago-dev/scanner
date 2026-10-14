@@ -59,8 +59,17 @@ Preparadas en F0.8; ninguna se ha ejecutado. Orden recomendado:
 
 ## 13. Sitio de docs (F7.5)
 - [ ] Activar GitHub Pages (Source: GitHub Actions) y apuntar el dominio `qhago.dev` (los `ScanError.docsUrl` usan
-      `https://qhago.dev/docs/errors#…`). Sin dominio propio, lanzar `docs.yml` a mano con base `/<repo>/docs/`.
+      `https://qhago.dev/docs/errors#…`). `pages.yml` (antes `docs.yml`) toma las rutas de la configuración de Pages:
+      sin dominio propio publica en `/<repo>/docs/` y `/<repo>/demo/` sin tocar nada.
 - [ ] Probar el inicio rápido con alguien que no conozca el proyecto (criterio de F7.5).
+
+## 13b. Demo pública (F11)
+- [ ] Con Pages activo, comprobar `https://qhago.dev/demo/` (o `/<repo>/demo/`).
+- [ ] Habilitar Dependabot (Settings → Code security → Dependabot version updates) para `.github/dependabot.yml`.
+- [ ] Prueba manual: Android Chrome e iOS Safari reales leen un EAN-13 con la cámara trasera desde la URL pública;
+      registrar en la tabla de `showcase/README.md`. Lighthouse móvil una vez (accesibilidad ≥ 90).
+- [ ] Comprobar que `npx degit qhago-dev/scanner/showcase app` funciona cuando el repo sea público (el CI ya prueba
+      la copia fuera del repo).
 
 ## 14. Camino a 1.0 (F7.7)
 - [ ] Publicar la beta (sección 7) y, tras la matriz de dispositivos, el RC (`pre exit` → `pre enter rc`).

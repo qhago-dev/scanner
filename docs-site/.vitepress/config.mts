@@ -15,6 +15,8 @@ export default defineConfig({
       { text: "API", link: "/api/" },
       { text: "Benchmark", link: "/benchmark" },
       { text: "Errores", link: "/errors" },
+      // F11: demo pública (showcase/), servida junto a las docs en /demo/ (pages.yml pasa la URL real).
+      { text: "Demo", link: process.env.DEMO_URL ?? "https://qhago.dev/demo/" },
     ],
     sidebar: [
       { text: "Empezar", items: [{ text: "Inicio rápido", link: "/inicio" }] },

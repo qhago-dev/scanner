@@ -1,5 +1,17 @@
 # Registro de revisión de los SDD
 
+## Fase 12 v2 — 2026-10-13 (revisión independiente)
+
+- v1 → APROBADO CON CORRECCIONES (0 bloqueantes, 2 importantes). La revisión verificó el rango con semver y la opción
+  `onlyUpdatePeerDependentsWhenOutOfRange` en el código de `@changesets/assemble-release-plan` 6.0.10 (respeta el
+  modo pre). Importantes:
+  - G7a de fase 7 dice `0.x.y-rc.N`: el RC será `0.1.0-rc.N`, cubierto por el rango (aclarado en fase 7, y la
+    guarda lo exige);
+  - la guarda debe correr en `release:dry` y tras `changeset version`, y cubrir el flujo de changesets/action
+    (CI de la PR «Version Packages» y `release.yml`).
+- v2: ambos aplicados. Además, la guarda comprueba el plan de changesets (camino negativo verificado), y se añaden
+  los riesgos de pnpm/yarn y del peer de ORT.
+
 ## Fase 11 v2 — 2026-10-13 (revisión independiente)
 
 - v1 → NO APROBADO (4 bloqueantes): el e2e "con IA" en modo `fallback` con un fixture nítido nunca ejecuta la IA;

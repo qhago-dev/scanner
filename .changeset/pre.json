@@ -8,6 +8,7 @@
   },
   "changesets": [
     "ai-duty-weak-fusion",
+    "ai-peer-range",
     "ai-public-beta",
     "api-freeze-beta",
     "bundle-wasm-hint",

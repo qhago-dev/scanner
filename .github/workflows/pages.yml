@@ -1,18 +1,22 @@
-# F7.5: sitio de docs (VitePress + TypeDoc) en GitHub Pages, servido bajo /docs/ (ScanError.docsUrl → /docs/errors#…).
-# Con el dominio propio (qhago.dev) configurado en Pages, la URL queda https://qhago.dev/docs/. Sin dominio propio,
-# lanza el workflow a mano con base "/<repo>/docs/".
-name: Docs
+# GitHub Pages: un solo artefacto con el sitio de docs en /docs/ (F7.5, VitePress + TypeDoc; ScanError.docsUrl →
+# /docs/errors#…) y la demo pública en /demo/ (F11, showcase/ con los paquetes publicados de su lockfile, nunca el
+# workspace). El artefacto es único: cada despliegue reconstruye los dos.
+# Las rutas salen de la configuración de Pages: con el dominio propio (qhago.dev) quedan /docs/ y /demo/; sin él,
+# /<repo>/docs/ y /<repo>/demo/.
+name: Pages
 
 on:
   push:
     branches: [master]
-    paths: ["docs-site/**", "docs/guias/**", "docs/soporte.md", "bench/results/**", "packages/scanner/src/**"]
+    paths:
+      - "docs-site/**"
+      - "docs/guias/**"
+      - "docs/soporte.md"
+      - "bench/results/**"
+      - "packages/scanner/src/**"
+      - "showcase/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
-    inputs:
-      base:
-        description: "Base del sitio"
-        type: string
-        default: "/docs/"
 
 permissions:
   contents: read
@@ -26,12 +30,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: pages
+        uses: actions/configure-pages@v5
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: bun install --frozen-lockfile
       - run: cd docs-site && bun run build
         env:
-          DOCS_BASE: ${{ inputs.base || '/docs/' }}
-      - run: mkdir -p _site/docs && cp -r docs-site/.vitepress/dist/* _site/docs/
+          DOCS_BASE: ${{ steps.pages.outputs.base_path }}/docs/
+          DEMO_URL: ${{ steps.pages.outputs.base_url }}/demo/
+      - run: cd showcase && npm ci && npm run build
+        env:
+          DEMO_BASE: ${{ steps.pages.outputs.base_path }}/demo/
+      - run: |
+          mkdir -p _site/docs _site/demo
+          cp -r docs-site/.vitepress/dist/* _site/docs/
+          cp -r showcase/dist/* _site/demo/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
@@ -40,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.pages.outputs.page_url }}docs/
+      url: ${{ steps.pages.outputs.page_url }}demo/
     steps:
       - id: pages
         uses: actions/deploy-pages@v4

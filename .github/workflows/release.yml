@@ -66,6 +66,13 @@ jobs:
             npm dist-tag add "$name@$v" latest ||
               echo "::warning::No se pudo mover latest de $name (activa 'Allow npm dist-tag' en el Trusted Publisher)"
           done
+      # F11: versiones publicadas de cada paquete (pueden diferir: changesets no los agrupa con fixed/linked).
+      - if: steps.changesets.outputs.published == 'true'
+        id: versions
+        env:
+          PUBLISHED: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          node -e 'const p=JSON.parse(process.env.PUBLISHED);const v=(n)=>p.find(x=>x.name===n)?.version??"";console.log(`scanner=${v("@qhago/scanner")}\nai=${v("@qhago/ai")}`)' >> "$GITHUB_OUTPUT"
       # F7.4: artefactos del motor y checksums en la GitHub Release que crea changesets (createGithubReleases).
       - if: steps.changesets.outputs.published == 'true'
         id: assets
@@ -80,6 +87,8 @@ jobs:
           gh release upload "@qhago/scanner@$v" qhago_engine.wasm qhago_engine_node.wasm SHA256SUMS --clobber
     outputs:
       version: ${{ steps.assets.outputs.version }}
+      scanner: ${{ steps.versions.outputs.scanner }}
+      ai: ${{ steps.versions.outputs.ai }}
 
   smoke:
     # F7.4: instalación desde el registro con npm, pnpm, yarn y bun + CDN, sobre la versión recién publicada.
@@ -88,3 +97,15 @@ jobs:
     uses: ./.github/workflows/smoke.yml
     with:
       spec: "@qhago/scanner@${{ needs.release.outputs.version }}"
+
+  showcase:
+    # F11: la demo pública (showcase/) contra lo recién publicado; el paquete que no se publicó va a @latest.
+    needs: release
+    if: needs.release.outputs.scanner != '' || needs.release.outputs.ai != ''
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/showcase.yml
+    with:
+      scanner: ${{ needs.release.outputs.scanner }}
+      ai: ${{ needs.release.outputs.ai }}

@@ -1,0 +1,118 @@
+# F11: demo pública (showcase/) contra los paquetes PUBLICADOS en npm: typecheck, build, peso y e2e en Chromium
+# (archivo, cámara simulada, IA). Corre:
+#   - en PR/push que toquen showcase/ (versiones del lockfile) + prueba de plantilla fuera del repo;
+#   - tras cada Release (workflow_call con las versiones recién publicadas);
+#   - cada semana y a mano con @latest sin lockfile (canario: roturas por dependencias transitivas).
+# Tras Release y en el canario, un fallo abre un issue (la versión ya está publicada: no hay nada que bloquear).
+name: Showcase
+
+on:
+  pull_request:
+    paths: ["showcase/**", ".github/workflows/showcase.yml"]
+  push:
+    branches: [master]
+    paths: ["showcase/**", ".github/workflows/showcase.yml"]
+  workflow_call:
+    inputs:
+      scanner: { type: string, required: false, default: "", description: "Versión de @qhago/scanner" }
+      ai: { type: string, required: false, default: "", description: "Versión de @qhago/ai" }
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: showcase
+    env:
+      # En workflow_call, github.event_name es el del llamador (push): se distingue por las versiones recibidas.
+      MODE: ${{ (inputs.scanner != '' || inputs.ai != '') && 'release' || (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'latest' || 'lockfile' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Instalar (lockfile)
+        if: env.MODE == 'lockfile'
+        run: npm ci
+      - name: Instalar (versión recién publicada)
+        if: env.MODE == 'release'
+        env:
+          SCANNER: ${{ inputs.scanner || 'latest' }}
+          AI: ${{ inputs.ai || 'latest' }}
+        run: |
+          npm ci
+          for i in $(seq 12); do   # el registro (y su caché) puede tardar minutos en propagar la versión
+            npm i --save-exact --prefer-online "@qhago/scanner@$SCANNER" "@qhago/ai@$AI" && break
+            [ "$i" = 12 ] && exit 1
+            sleep 30
+          done
+      - name: Instalar (@latest, sin lockfile)
+        if: env.MODE == 'latest'
+        run: |
+          rm package-lock.json
+          npm i --prefer-online @qhago/scanner@latest @qhago/ai@latest
+      - run: npm ls @qhago/scanner @qhago/ai onnxruntime-web
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run size
+      - run: bash e2e/make-video.sh
+      - run: npm run e2e
+      # Como en GitHub Pages: servida bajo /demo/.
+      - run: npm run build && npm run e2e
+        env:
+          DEMO_BASE: /demo/
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: showcase-e2e
+          path: showcase/test-results/
+          if-no-files-found: ignore
+
+  # Lo que hace un usuario con `degit`: copia de showcase/ fuera del repo, npm ci, build y `vite dev` (ADR-06).
+  template:
+    if: (github.event_name == 'pull_request' || github.event_name == 'push') && inputs.scanner == '' && inputs.ai == ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Copia limpia en $RUNNER_TEMP/app
+        run: |
+          mkdir -p "$RUNNER_TEMP/app"
+          tar -C showcase --exclude=node_modules --exclude=dist -cf - . | tar -C "$RUNNER_TEMP/app" -xf -
+      - working-directory: ${{ runner.temp }}/app
+        run: |
+          npm ci
+          grep -q '"resolved": "https://registry.npmjs.org/@qhago/scanner/' package-lock.json
+          npm run build
+          npx playwright install --with-deps chromium
+          E2E_DEV=1 npm run e2e
+
+  report:
+    needs: e2e
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || inputs.scanner != '' || inputs.ai != '')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          WHAT: ${{ (inputs.scanner != '' || inputs.ai != '') && format('@qhago/scanner@{0} / @qhago/ai@{1}', inputs.scanner || 'latest', inputs.ai || 'latest') || '@latest (canario semanal)' }}
+        run: |
+          title="Showcase: el e2e falla con $WHAT"
+          if gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number' | grep -q .; then
+            echo "Ya hay un issue abierto: $title"
+          else
+            gh issue create --title "$title" --body "La demo pública falla contra los paquetes publicados ($WHAT). Run: $RUN"
+          fi

@@ -1,0 +1,13 @@
+# F11: la demo pública (showcase/) fija versiones exactas de @qhago/*; Dependabot abre una PR semanal con las nuevas
+# y showcase.yml la valida (e2e contra lo publicado). Requiere Dependabot habilitado en el repo (acción del autor).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /showcase
+    schedule:
+      interval: weekly
+    groups:
+      qhago:
+        patterns: ["@qhago/*", "onnxruntime-web"]
+      tooling:
+        patterns: ["vite", "typescript", "@playwright/test", "@types/node"]
